@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>劇照浮水印編輯器 - GagaOOLala</title>
-      <link rel="apple-touch-icon" sizes="180x180" href="favicon/apple-touch-icon.png">
-<link rel="icon" type="image/png" sizes="32x32" href="favicon/favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="favicon/favicon-16x16.png">
-<link rel="manifest" href="favicon/site.webmanifest">
+    <link rel="apple-touch-icon" sizes="180x180" href="favicon/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon/favicon-16x16.png">
+    <link rel="manifest" href="favicon/site.webmanifest">
     <!-- 引入必要的函式庫 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
@@ -134,16 +134,7 @@
         }
         .canvas-wrapper:active { cursor: grabbing; }
 
-        /* AI 指示器 */
-        .ai-indicator {
-            position: absolute; bottom: 50px; right: 10px;
-            background: rgba(0,0,0,0.7); color: var(--ai-color);
-            padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold;
-            display: flex; align-items: center; gap: 4px; pointer-events: none;
-            border: 1px solid rgba(216, 75, 247, 0.3);
-            opacity: 0; transition: opacity 0.5s;
-        }
-        .ai-indicator.show { opacity: 1; }
+        /* AI 指示器 (舊版已移除，改用新的 Toolbar Badge) */
 
         /* 卡片底部控制區 */
         .card-controls { padding: 10px; background: #222; border-top: 1px solid #333; display: flex; flex-direction: column; gap: 8px;}
@@ -181,7 +172,7 @@
             background: linear-gradient(to bottom, rgba(0,0,0,0.7), transparent);
             pointer-events: none; 
         }
-        .tools-right { display: flex; gap: 5px; pointer-events: auto; }
+        .tools-right { display: flex; gap: 5px; pointer-events: auto; align-items: center; }
 
         .checkbox-wrapper { pointer-events: auto; display: flex; align-items: center; cursor: pointer; }
         .custom-checkbox {
@@ -198,6 +189,23 @@
         }
         .icon-btn:hover { background: #444; border-color: white; color: white; }
         .delete-btn:hover { background: var(--danger-color); border-color: var(--danger-color); }
+
+        /* 新增 AI 狀態標籤樣式 */
+        .ai-badge-icon {
+            background: linear-gradient(45deg, #00d2ff, #d84bf7);
+            color: white;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: bold;
+            padding: 0 6px;
+            height: 26px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            cursor: default;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
 
         .empty-state {
             grid-column: 1 / -1; height: 100%; display: flex; flex-direction: column;
@@ -284,7 +292,7 @@
 
         <div class="footer-credit">
             
-            <img src="https://img.gagaoolala.com/assets/v2.1.1/img/ui/logo.png" alt="Girl in a jacket" width="120" height="26">
+            <img src="https://img.gagaoolala.com/assets/v2.1.1/img/ui/logo.png" alt="GagaOOLala Logo" width="120" height="26">
                  <br>
              GagaOOLala 設計部開發
         </div>
@@ -550,6 +558,16 @@
                 const toolsRight = document.createElement('div');
                 toolsRight.className = 'tools-right';
                 
+                // AI Indicator Badge in Toolbar
+                const config = state.mode === 'landscape' ? imgData.landscape : imgData.portrait;
+                if(config.aiDetected) {
+                    const aiBadge = document.createElement('div');
+                    aiBadge.className = 'ai-badge-icon';
+                    aiBadge.innerHTML = 'AI';
+                    aiBadge.title = '已自動調整構圖';
+                    toolsRight.appendChild(aiBadge);
+                }
+
                 const dupBtn = document.createElement('div');
                 dupBtn.className = 'icon-btn';
                 dupBtn.innerHTML = '❐';
@@ -570,15 +588,6 @@
                 const wrapper = document.createElement('canvas-wrapper');
                 wrapper.className = 'canvas-wrapper';
                 
-                // AI Badge
-                const config = state.mode === 'landscape' ? imgData.landscape : imgData.portrait;
-                if(config.aiDetected) {
-                    const aiBadge = document.createElement('div');
-                    aiBadge.className = 'ai-indicator show';
-                    aiBadge.innerHTML = '✨ AI 自動構圖';
-                    wrapper.appendChild(aiBadge);
-                }
-
                 const previewScale = 0.25; 
                 const uiW = targetSize.w * previewScale;
                 const uiH = targetSize.h * previewScale;
