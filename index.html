@@ -4,18 +4,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>劇照浮水印編輯器 - GagaOOLala</title>
-    <link rel="apple-touch-icon" sizes="180x180" href="favicon/apple-touch-icon.png">
+      <link rel="apple-touch-icon" sizes="180x180" href="favicon/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon/favicon-32x32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="favicon/favicon-16x16.png">
 <link rel="manifest" href="favicon/site.webmanifest">
+    <!-- 引入必要的函式庫 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <!-- SmartCrop 用於自動識別主體位置 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/smartcrop/2.0.3/smartcrop.min.js"></script>
+    
     <style>
         :root {
             --bg-color: #121212;
             --panel-bg: #1e1e1e;
             --text-color: #e0e0e0;
             --accent-color: #00d2ff;
+            --ai-color: #d84bf7;
+            --filter-color: #ffaa00; /* 調色功能的代表色 */
             --danger-color: #ff4444;
             --border-color: #444;
         }
@@ -32,7 +38,7 @@
 
         /* 左側 Sidebar */
         .sidebar {
-            width: 450px;
+            width: 340px;
             background: var(--panel-bg);
             padding: 20px;
             border-right: 1px solid var(--border-color);
@@ -45,6 +51,10 @@
 
         h1 { font-size: 1.2rem; margin: 0 0 5px 0; color: white; letter-spacing: 1px; }
         .subtitle { font-size: 0.8rem; color: #888; margin-bottom: 20px; }
+        .ai-badge { 
+            background: linear-gradient(45deg, #00d2ff, #d84bf7); 
+            color: black; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 10px; margin-left: 5px;
+        }
 
         .control-group { margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 15px; }
         .control-group:last-child { border-bottom: none; }
@@ -57,7 +67,7 @@
         input[type="text"]::placeholder { color: #666; font-style: italic; }
 
         .file-btn {
-            display: block; width: 95%; padding: 10px; background: #333; color: #ccc;
+            display: block; width: 93%; padding: 10px; background: #333; color: #ccc;
             text-align: center; border: 1px dashed #666; cursor: pointer; border-radius: 4px; margin-bottom: 5px;
         }
         .file-btn:hover { border-color: var(--accent-color); color: white; }
@@ -109,7 +119,7 @@
             display: grid; gap: 20px; align-content: start;
             grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
         }
-        .editor-container.portrait-mode { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+        .editor-container.portrait-mode { grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); }
 
         .edit-card {
             background: #1a1a1a; border: 1px solid #333; border-radius: 8px; overflow: hidden;
@@ -124,10 +134,39 @@
         }
         .canvas-wrapper:active { cursor: grabbing; }
 
+        /* AI 指示器 */
+        .ai-indicator {
+            position: absolute; bottom: 50px; right: 10px;
+            background: rgba(0,0,0,0.7); color: var(--ai-color);
+            padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold;
+            display: flex; align-items: center; gap: 4px; pointer-events: none;
+            border: 1px solid rgba(216, 75, 247, 0.3);
+            opacity: 0; transition: opacity 0.5s;
+        }
+        .ai-indicator.show { opacity: 1; }
+
         /* 卡片底部控制區 */
-        .card-controls { padding: 10px; background: #222; border-top: 1px solid #333; }
-        .zoom-control { display: flex; align-items: center; gap: 10px; font-size: 11px; color: #888; }
-        .zoom-control input[type=range] { margin: 0; flex: 1; height: 4px; }
+        .card-controls { padding: 10px; background: #222; border-top: 1px solid #333; display: flex; flex-direction: column; gap: 8px;}
+        
+        /* 縮放列 */
+        .control-row { display: flex; align-items: center; gap: 8px; width: 100%; }
+        .control-label { font-size: 11px; color: #888; min-width: 45px; display: flex; align-items: center; gap: 4px; }
+        input[type=range] { margin: 0; flex: 1; height: 4px; }
+
+        /* 調色盤按鈕 */
+        .color-btn {
+            background: #333; border: 1px solid #555; color: #ccc; font-size: 11px; padding: 4px 8px; border-radius: 4px; cursor: pointer;
+            transition: 0.2s; display: flex; align-items: center; gap: 4px; margin-left: auto;
+        }
+        .color-btn:hover, .color-btn.active { background: var(--filter-color); color: black; border-color: var(--filter-color); }
+
+        /* 調色盤面板 */
+        .filter-panel {
+            background: #181818; padding: 8px; border-radius: 4px; margin-top: 5px;
+            display: none; border: 1px solid #333;
+        }
+        .filter-panel.show { display: block; animation: fadeIn 0.2s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
 
         /* 卡片資訊列 */
         .card-info {
@@ -135,7 +174,7 @@
             white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
         }
 
-        /* 卡片頂部工具列 (Checkbox, Duplicate, Delete) */
+        /* 卡片頂部工具列 */
         .card-tools {
             position: absolute; top: 0; left: 0; width: 100%; padding: 8px; box-sizing: border-box;
             display: flex; justify-content: space-between; z-index: 5;
@@ -176,15 +215,17 @@
             border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .loading-subtitle { color: #888; font-size: 12px; margin-top: 5px; }
 
     </style>
 </head>
 <body>
 
+    <!-- 側邊欄 -->
     <div class="sidebar">
         <div>
-            <h1>劇照浮水印編輯器</h1>
-            <div class="subtitle">Ver.5.01</div>
+            <h1>劇照編輯器 <span class="ai-badge">AI + 調色</span></h1>
+            <div class="subtitle">V6.5</div>
 
             <div class="control-group">
                 <label style="color:white;">📁 專案/影集代碼 (命名用)</label>
@@ -198,7 +239,7 @@
             </div>
 
             <div class="control-group">
-                <label>2. 上傳劇照 (多選)</label>
+                <label>2. 上傳劇照</label>
                 <label for="imageInput" class="file-btn">新增圖片</label>
                 <input type="file" id="imageInput" multiple accept="image/*">
                 
@@ -210,7 +251,7 @@
 
             <div class="control-group">
                 <label>版權文字</label>
-                <input type="text" id="copyrightText" placeholder="例如:©2025 Love Begins in the World of If Production committee・MBS">
+                <input type="text" id="copyrightText" placeholder="©2025 Love Begins in the World of If Production committee・MBS">
                 <div class="slider-row" style="margin-top:10px;"><label>文字大小</label><span class="slider-val" id="fontSizeVal">1.2</span></div>
                 <input type="range" id="fontSizeScale" min="0.5" max="3.0" step="0.1" value="1.2">
             </div>
@@ -219,8 +260,8 @@
                 <div class="slider-row"><label>Logo 縮放</label><span class="slider-val" id="logoScaleVal">35%</span></div>
                 <input type="range" id="logoScale" min="10" max="80" value="35">
                 
-                <div class="slider-row"><label>Logo 底部距離</label><span class="slider-val" id="logoBottomVal">5%</span></div>
-                <input type="range" id="logoBottom" min="0" max="20" value="5">
+                <div class="slider-row"><label>Logo 底部距離</label><span class="slider-val" id="logoBottomVal">0%</span></div>
+                <input type="range" id="logoBottom" min="0" max="20" value="0">
             </div>
 
             <div class="control-group">
@@ -249,6 +290,7 @@
         </div>
     </div>
 
+    <!-- 主區域 -->
     <div class="main-area">
         <div class="tabs">
             <div class="tab active" data-mode="landscape">橫式編輯區 (1920 x 1080)</div>
@@ -258,14 +300,15 @@
         <div class="editor-container" id="editorContainer">
             <div class="empty-state">
                 <h2>尚未載入劇照</h2>
-                <p>請從左側上傳圖片開始製作</p>
+                <p>請從左側上傳圖片，AI 將自動分析構圖</p>
             </div>
         </div>
     </div>
 
     <div class="loading-overlay" id="loadingOverlay">
         <div class="spinner"></div>
-        <div id="progressText" style="color:white; margin-top:15px;">處理中...</div>
+        <div id="progressText" style="color:white; margin-top:15px; font-weight:bold;">處理中...</div>
+        <div id="progressSub" class="loading-subtitle">AI 正在分析照片構圖</div>
     </div>
 
     <script>
@@ -276,7 +319,7 @@
         // --- State ---
         let state = {
             mode: 'landscape',
-            // imgData structure: { id, file, imgObj, selected, landscape: {x, y, baseScale, userScale, minX, minY...}, portrait: {...} }
+            // images: { ..., landscape: {x, y, ...}, portrait: {...}, adjustments: {brightness, contrast, saturation} }
             images: [], 
             logo: null
         };
@@ -294,6 +337,7 @@
             dlPortraitBtn: document.getElementById('dlPortraitBtn'),
             loading: document.getElementById('loadingOverlay'),
             progress: document.getElementById('progressText'),
+            progressSub: document.getElementById('progressSub'),
             // Inputs
             logoScale: document.getElementById('logoScale'),
             logoBottom: document.getElementById('logoBottom'),
@@ -355,19 +399,26 @@
             }
         });
 
-        // Load Images
+        // Load Images & Run AI
         els.imageInput.addEventListener('change', async (e) => {
             const files = Array.from(e.target.files);
             if(files.length === 0) return;
 
             els.loading.style.display = 'flex';
-            els.progress.innerText = "載入圖片中...";
+            
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                els.progress.innerText = `正在載入 ${i+1}/${files.length}`;
+                els.progressSub.innerText = "AI 正在分析主體位置...";
 
-            for (let file of files) {
                 const imgObj = await loadImage(file);
                 
-                const landscapeConfig = createInitialConfig(imgObj, SIZE_LANDSCAPE);
-                const portraitConfig = createInitialConfig(imgObj, SIZE_PORTRAIT);
+                // --- AI Analysis Step ---
+                const cropLandscape = await analyzeComposition(imgObj, SIZE_LANDSCAPE.w, SIZE_LANDSCAPE.h);
+                const cropPortrait = await analyzeComposition(imgObj, SIZE_PORTRAIT.w, SIZE_PORTRAIT.h);
+
+                const landscapeConfig = createConfigFromAI(imgObj, SIZE_LANDSCAPE, cropLandscape);
+                const portraitConfig = createConfigFromAI(imgObj, SIZE_PORTRAIT, cropPortrait);
 
                 state.images.push({
                     id: Date.now() + Math.random(),
@@ -375,7 +426,9 @@
                     imgObj: imgObj,
                     selected: true, 
                     landscape: landscapeConfig, 
-                    portrait: portraitConfig
+                    portrait: portraitConfig,
+                    // Default Adjustments
+                    adjustments: { brightness: 100, contrast: 100, saturation: 100 }
                 });
             }
 
@@ -384,7 +437,6 @@
             els.loading.style.display = 'none';
         });
 
-        // Toggle Select All
         els.toggleSelectBtn.addEventListener('click', () => {
             if(state.images.length === 0) return;
             const hasUnselected = state.images.some(img => !img.selected);
@@ -393,7 +445,70 @@
             renderGrid(); 
         });
 
-        // --- Logic ---
+        // --- AI Logic (SmartCrop) ---
+        
+        async function analyzeComposition(img, targetW, targetH) {
+            try {
+                const result = await smartcrop.crop(img, { width: targetW, height: targetH });
+                return result.topCrop;
+            } catch (err) {
+                console.warn("SmartCrop failed, falling back to center", err);
+                return null;
+            }
+        }
+
+        function createConfigFromAI(imgObj, targetSize, cropData) {
+            const ratioSrc = imgObj.width / imgObj.height;
+            const ratioTarget = targetSize.w / targetSize.h;
+            let baseScale;
+
+            if (ratioSrc > ratioTarget) baseScale = targetSize.h / imgObj.height;
+            else baseScale = targetSize.w / imgObj.width;
+
+            const config = {
+                baseScale: baseScale,
+                userScale: 1.0,
+                origW: imgObj.width,
+                origH: imgObj.height,
+                x: 0, y: 0,
+                aiDetected: !!cropData
+            };
+
+            if (cropData) {
+                const cropCenterX = cropData.x + (cropData.width / 2);
+                const cropCenterY = cropData.y + (cropData.height / 2);
+                config.x = (targetSize.w / 2) - (cropCenterX * baseScale);
+                config.y = (targetSize.h / 2) - (cropCenterY * baseScale);
+            } else {
+                const scaledW = imgObj.width * baseScale;
+                const scaledH = imgObj.height * baseScale;
+                config.x = (targetSize.w - scaledW) / 2;
+                config.y = (targetSize.h - scaledH) / 2;
+            }
+
+            recalculateBounds(config, targetSize.w, targetSize.h, false);
+            return config;
+        }
+
+        function recalculateBounds(config, targetW, targetH, forceCenter = false) {
+            const totalScale = config.baseScale * config.userScale;
+            config.currentW = config.origW * totalScale;
+            config.currentH = config.origH * totalScale;
+            config.minX = targetW - config.currentW;
+            config.minY = targetH - config.currentH;
+
+            if (!forceCenter) {
+                if (config.x < config.minX) config.x = config.minX;
+                if (config.y < config.minY) config.y = config.minY;
+                if (config.x > 0) config.x = 0;
+                if (config.y > 0) config.y = 0;
+            } else {
+                config.x = (targetW - config.currentW) / 2;
+                config.y = (targetH - config.currentH) / 2;
+            }
+        }
+
+        // --- Rendering ---
 
         function updateUI() {
             const selectedCount = state.images.filter(img => img.selected).length;
@@ -405,51 +520,14 @@
             els.toggleSelectBtn.disabled = !hasImages;
         }
 
-        function createInitialConfig(imgObj, targetSize) {
-            const ratioSrc = imgObj.width / imgObj.height;
-            const ratioTarget = targetSize.w / targetSize.h;
-            let baseScale;
-
-            // Calculate scale to cover fit
-            if (ratioSrc > ratioTarget) baseScale = targetSize.h / imgObj.height;
-            else baseScale = targetSize.w / imgObj.width;
-
-            const config = {
-                baseScale: baseScale,
-                userScale: 1.0, // Initial zoom
-                origW: imgObj.width,
-                origH: imgObj.height,
-                x: 0, y: 0 // Center positions calculated in recalculateBounds
-            };
-            
-            recalculateBounds(config, targetSize.w, targetSize.h, true); // Center initially
-            return config;
-        }
-
-        // Updates current width/height and drag boundaries based on zoom
-        function recalculateBounds(config, targetW, targetH, center = false) {
-            const totalScale = config.baseScale * config.userScale;
-            config.currentW = config.origW * totalScale;
-            config.currentH = config.origH * totalScale;
-            config.minX = targetW - config.currentW;
-            config.minY = targetH - config.currentH;
-
-            if (center) {
-                config.x = (targetW - config.currentW) / 2;
-                config.y = (targetH - config.currentH) / 2;
-            } else {
-                // Ensure current position is still valid after zoom out
-                if (config.x < config.minX) config.x = config.minX;
-                if (config.y < config.minY) config.y = config.minY;
-                if (config.x > 0) config.x = 0;
-                if (config.y > 0) config.y = 0;
-            }
-        }
-
         function renderGrid() {
             els.editorContainer.innerHTML = '';
             if(state.images.length === 0) {
-                els.editorContainer.innerHTML = `<div class="empty-state"><h2>尚未載入劇照</h2></div>`;
+                els.editorContainer.innerHTML = `
+                    <div class="empty-state">
+                        <h2>尚未載入劇照</h2>
+                        <p>請從左側上傳圖片，AI 將自動分析構圖</p>
+                    </div>`;
                 return;
             }
 
@@ -459,30 +537,26 @@
                 const card = document.createElement('div');
                 card.className = `edit-card ${imgData.selected ? 'selected' : 'unselected'}`;
                 
-                // --- Tools Overlay ---
+                // Tools Overlay
                 const tools = document.createElement('div');
                 tools.className = 'card-tools';
                 
-                // Checkbox
                 const cbWrapper = document.createElement('div');
                 cbWrapper.className = `checkbox-wrapper ${imgData.selected ? 'active' : ''}`;
                 cbWrapper.innerHTML = `<div class="custom-checkbox"></div>`;
                 cbWrapper.onclick = (e) => { e.stopPropagation(); toggleImageSelection(imgData.id); };
                 tools.appendChild(cbWrapper);
 
-                // Right Tools (Duplicate & Delete)
                 const toolsRight = document.createElement('div');
                 toolsRight.className = 'tools-right';
-
-                // Duplicate Button
+                
                 const dupBtn = document.createElement('div');
                 dupBtn.className = 'icon-btn';
                 dupBtn.innerHTML = '❐';
-                dupBtn.title = "複製這張圖 (建立新版本)";
+                dupBtn.title = "複製";
                 dupBtn.onclick = (e) => { e.stopPropagation(); duplicateImage(imgData.id); };
                 toolsRight.appendChild(dupBtn);
 
-                // Delete Button
                 const delBtn = document.createElement('div');
                 delBtn.className = 'icon-btn delete-btn';
                 delBtn.innerHTML = '✕';
@@ -492,10 +566,19 @@
                 tools.appendChild(toolsRight);
                 card.appendChild(tools);
 
-                // --- Canvas ---
+                // Canvas
                 const wrapper = document.createElement('canvas-wrapper');
                 wrapper.className = 'canvas-wrapper';
                 
+                // AI Badge
+                const config = state.mode === 'landscape' ? imgData.landscape : imgData.portrait;
+                if(config.aiDetected) {
+                    const aiBadge = document.createElement('div');
+                    aiBadge.className = 'ai-indicator show';
+                    aiBadge.innerHTML = '✨ AI 自動構圖';
+                    wrapper.appendChild(aiBadge);
+                }
+
                 const previewScale = 0.25; 
                 const uiW = targetSize.w * previewScale;
                 const uiH = targetSize.h * previewScale;
@@ -510,28 +593,64 @@
                 setupDrag(canvas, imgData, previewScale);
                 wrapper.appendChild(canvas);
                 
-                // --- Controls & Info ---
+                // Controls Area
                 const controls = document.createElement('div');
                 controls.className = 'card-controls';
                 
-                // Zoom Slider
-                const config = state.mode === 'landscape' ? imgData.landscape : imgData.portrait;
-                const zoomControl = document.createElement('div');
-                zoomControl.className = 'zoom-control';
-                zoomControl.innerHTML = `<span>🔍 縮放</span><input type="range" min="1" max="3" step="0.01" value="${config.userScale}">`;
+                // Row 1: Zoom + Color Toggle
+                const row1 = document.createElement('div');
+                row1.className = 'control-row';
                 
-                const zoomInput = zoomControl.querySelector('input');
+                // Zoom
+                row1.innerHTML = `<div class="control-label">🔍 縮放</div>`;
+                const zoomInput = document.createElement('input');
+                zoomInput.type = 'range'; zoomInput.min = '1'; zoomInput.max = '3'; zoomInput.step = '0.01'; zoomInput.value = config.userScale;
                 zoomInput.addEventListener('input', (e) => {
                     config.userScale = parseFloat(e.target.value);
                     recalculateBounds(config, targetSize.w, targetSize.h, false);
                     drawCanvas(canvas, imgData, state.mode, previewScale);
                 });
+                row1.appendChild(zoomInput);
 
-                controls.appendChild(zoomControl);
+                // Color Toggle
+                const colorBtn = document.createElement('div');
+                colorBtn.className = 'color-btn';
+                colorBtn.innerHTML = `🎨 調色`;
+                colorBtn.onclick = () => {
+                    const panel = controls.querySelector('.filter-panel');
+                    panel.classList.toggle('show');
+                    colorBtn.classList.toggle('active');
+                };
+                row1.appendChild(colorBtn);
+                controls.appendChild(row1);
 
+                // Row 2: Filter Panel (Hidden by default)
+                const filters = document.createElement('div');
+                filters.className = 'filter-panel';
+                
+                const createFilterSlider = (label, key, icon) => {
+                    const row = document.createElement('div');
+                    row.className = 'control-row';
+                    row.style.marginBottom = '5px';
+                    row.innerHTML = `<div class="control-label">${icon} ${label}</div>`;
+                    const input = document.createElement('input');
+                    input.type = 'range'; input.min = '0'; input.max = '200'; input.step = '1'; input.value = imgData.adjustments[key];
+                    input.addEventListener('input', (e) => {
+                        imgData.adjustments[key] = parseInt(e.target.value);
+                        drawCanvas(canvas, imgData, state.mode, previewScale);
+                    });
+                    row.appendChild(input);
+                    return row;
+                };
+
+                filters.appendChild(createFilterSlider('亮度', 'brightness', '☀'));
+                filters.appendChild(createFilterSlider('對比', 'contrast', '◑'));
+                filters.appendChild(createFilterSlider('飽和', 'saturation', '🍭'));
+                controls.appendChild(filters);
+
+                // Info
                 const info = document.createElement('div');
                 info.className = 'card-info';
-                info.title = imgData.file.name;
                 info.innerText = imgData.file.name;
 
                 card.appendChild(wrapper);
@@ -566,19 +685,15 @@
             const index = state.images.findIndex(x => x.id === id);
             if (index === -1) return;
             const source = state.images[index];
-
-            // Deep copy state required
             const newImageEntry = {
                 id: Date.now() + Math.random(),
-                file: source.file, // Reuse same file object
-                imgObj: source.imgObj, // Reuse same image object
+                file: source.file, 
+                imgObj: source.imgObj, 
                 selected: source.selected,
-                // Spread to create shallow copy of configs so they can diverge
                 landscape: { ...source.landscape },
-                portrait: { ...source.portrait }
+                portrait: { ...source.portrait },
+                adjustments: { ...source.adjustments } // Copy filters
             };
-
-            // Insert after current item
             state.images.splice(index + 1, 0, newImageEntry);
             updateUI();
             renderGrid();
@@ -602,12 +717,9 @@
             const onMouseMove = (e) => {
                 if (!isDragging) return;
                 e.preventDefault();
-
                 const rect = canvas.getBoundingClientRect();
                 const visualScaleX = canvas.width / rect.width;
                 const visualScaleY = canvas.height / rect.height;
-
-                // Drag speed feels better slightly faster when zoomed in
                 const deltaX = (e.clientX - startX) * visualScaleX * 1.2; 
                 const deltaY = (e.clientY - startY) * visualScaleY * 1.2;
 
@@ -615,7 +727,6 @@
                 let newX = initialImgX + deltaX;
                 let newY = initialImgY + deltaY;
 
-                // Bounds check using recalculated minX/minY
                 if (newX > 0) newX = 0;
                 if (newX < config.minX) newX = config.minX;
                 if (newY > 0) newY = 0;
@@ -626,11 +737,7 @@
                 drawCanvas(canvas, imgData, state.mode, uiScale);
             };
 
-            const onMouseUp = () => {
-                isDragging = false;
-                canvas.parentElement.style.cursor = 'grab';
-            };
-
+            const onMouseUp = () => { isDragging = false; canvas.parentElement.style.cursor = 'grab'; };
             canvas.addEventListener('mousedown', onMouseDown);
             window.addEventListener('mousemove', onMouseMove); 
             window.addEventListener('mouseup', onMouseUp);
@@ -640,24 +747,25 @@
             const ctx = canvas.getContext('2d');
             const targetW = canvas.width;
             const targetH = canvas.height;
-            
             ctx.clearRect(0, 0, targetW, targetH);
-            // Use high quality smoothing for better preview of scaled images
-            ctx.imageSmoothingEnabled = true;
-            ctx.imageSmoothingQuality = 'high';
+            ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
 
             const config = mode === 'landscape' ? imgData.landscape : imgData.portrait;
+            
+            // 1. Apply Filters
+            ctx.save();
+            const adj = imgData.adjustments;
+            if (adj) {
+                ctx.filter = `brightness(${adj.brightness}%) contrast(${adj.contrast}%) saturate(${adj.saturation}%)`;
+            }
 
-            // Draw Image using calculated currentW/H
-            ctx.drawImage(
-                imgData.imgObj, 
-                config.x * scaleFactor, 
-                config.y * scaleFactor, 
-                config.currentW * scaleFactor, 
-                config.currentH * scaleFactor
-            );
+            // 2. Draw Image
+            ctx.drawImage(imgData.imgObj, config.x * scaleFactor, config.y * scaleFactor, config.currentW * scaleFactor, config.currentH * scaleFactor);
+            
+            // 3. Reset Filter
+            ctx.restore();
 
-            // Gradient
+            // 4. Draw Gradient (Not affected by filters)
             const gHeightPercent = parseInt(els.gradHeight.value) / 100;
             if (gHeightPercent > 0) {
                 const gHeight = targetH * gHeightPercent;
@@ -669,7 +777,7 @@
                 ctx.fillRect(0, targetH - gHeight, targetW, gHeight);
             }
 
-            // Logo
+            // 5. Draw Logo
             if (state.logo) {
                 const logoScaleP = parseInt(els.logoScale.value) / 100;
                 const logoBottomP = parseInt(els.logoBottom.value) / 100;
@@ -680,20 +788,16 @@
                 ctx.drawImage(state.logo, logoX, logoY, drawLogoW, drawLogoH);
             }
 
-            // Text
+            // 6. Draw Text
             const text = els.copyright.value;
             if (text) {
                 const fontSizeBase = targetH * 0.012; 
                 const fontSize = fontSizeBase * parseFloat(els.fontSize.value);
                 ctx.font = `${fontSize}px "Helvetica Neue", Arial, sans-serif`;
                 ctx.fillStyle = "rgba(255,255,255,0.9)";
-                ctx.textAlign = "right";
-                ctx.textBaseline = "bottom";
-                ctx.shadowColor = "rgba(0,0,0,0.8)";
-                ctx.shadowBlur = 2; 
-                ctx.shadowOffsetX = 1; ctx.shadowOffsetY = 1;
-                const marginX = targetW * 0.02; 
-                const marginY = targetH * 0.015; 
+                ctx.textAlign = "right"; ctx.textBaseline = "bottom";
+                ctx.shadowColor = "rgba(0,0,0,0.8)"; ctx.shadowBlur = 2; ctx.shadowOffsetX = 1; ctx.shadowOffsetY = 1;
+                const marginX = targetW * 0.02; const marginY = targetH * 0.015; 
                 ctx.fillText(text, targetW - marginX, targetH - marginY);
             }
         }
@@ -719,8 +823,6 @@
             });
         }
 
-        // --- Download Logic ---
-
         function drawHighRes(imgData, mode) {
             const size = mode === 'landscape' ? SIZE_LANDSCAPE : SIZE_PORTRAIT;
             const canvas = document.createElement('canvas');
@@ -738,6 +840,7 @@
             if(selectedImages.length === 0) { alert("請至少選取一張照片"); return; }
 
             els.loading.style.display = 'flex';
+            els.progressSub.innerText = "正在產生高解析度檔案...";
             const zip = new JSZip();
             const prefixInput = els.filenamePrefix.value.trim();
             const folderName = targetMode === 'landscape' ? "Horizontal_1920" : "Vertical_1080";
@@ -755,15 +858,12 @@
                     const seq = (i + 1).toString().padStart(3, '0');
                     filename = `${prefixInput}_${seq}.jpg`;
                 } else {
-                    // Append copy number if it's a duplicate to avoid overwrite
-                    // Simple heuristic: if multiple selected images come from same source file
                     const copies = selectedImages.filter(img => img.file.name === imgData.file.name);
                     let copySuffix = "";
                     if (copies.length > 1) {
                          const copyIndex = copies.indexOf(imgData) + 1;
                          copySuffix = `_v${copyIndex}`;
                     }
-
                     const suffix = targetMode === 'landscape' ? '_1920x1080' : '_1080x1350';
                     filename = imgData.file.name.replace(/\.[^/.]+$/, "") + copySuffix + suffix + ".jpg";
                 }
