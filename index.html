@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-    <title>劇照浮水印編輯器- GagaOOLala</title>
+    <title>劇照浮水印編輯器 - GagaOOLala</title>
     <link rel="apple-touch-icon" sizes="180x180" href="favicon/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="favicon/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="favicon/favicon-16x16.png">
@@ -114,17 +114,17 @@
         .tab.active { background: #000; color: var(--accent-color); border-top: 3px solid var(--accent-color); }
         .tab:hover:not(.active) { background: #2a2a2a; color: #ddd; }
 
-        /* 網格編輯區 */
+        /* 網格編輯區 - RWD 核心設定 */
         .editor-container {
             flex: 1; overflow-y: auto; padding: 20px;
-            display: grid; gap: 20px; align-content: start;
-            /* RWD 修改重點：降低 minmax 最小值 */
-            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            display: grid; gap: 25px; align-content: start;
+            /* 桌面版：橫式卡片最小寬度 380px，確保夠大 */
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
         }
         
         .editor-container.portrait-mode {
-            /* RWD 修改重點：讓直式可以縮得更小，適應電腦縮小的視窗 */
-            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            /* 桌面版：直式卡片最小寬度 300px，確保夠大 */
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
         }
 
         .edit-card {
@@ -213,9 +213,19 @@
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .loading-subtitle { color: #888; font-size: 12px; margin-top: 5px; }
 
-        /* --- RWD 響應式設計 --- */
+        /* --- RWD 響應式設計 (強化版) --- */
         
-        /* 平板與手機直向 (小於 900px) */
+        /* 平板/小筆電 (小於 1100px)：稍微縮小卡片，保持並排 */
+        @media (max-width: 1100px) {
+            .editor-container {
+                grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            }
+            .editor-container.portrait-mode {
+                grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            }
+        }
+
+        /* 直立平板/手機 (小於 900px)：改為垂直佈局 */
         @media (max-width: 900px) {
             body {
                 flex-direction: column;
@@ -239,18 +249,18 @@
             }
 
             .editor-container {
-                overflow-y: visible; /* 讓內容撐開容器 */
-                grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); /* 調整卡片最小寬度以適應手機 */
+                overflow-y: visible; 
                 padding: 15px;
+                /* 手機寬度下，確保卡片夠大 */
+                grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
             }
             
             .editor-container.portrait-mode {
-                grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+                grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
             }
 
             .file-btn { width: 100%; }
             
-            /* 讓 Logo 與文字並排在手機上看起來好一點 */
             .footer-credit {
                 display: flex; align-items: center; justify-content: center; gap: 10px;
                 padding-bottom: 0;
@@ -258,15 +268,11 @@
             .footer-credit br { display: none; }
         }
 
-        /* 超小手機 (小於 480px) */
-        @media (max-width: 480px) {
-            .editor-container {
-                grid-template-columns: 1fr; /* 手機上一行一張 */
+        /* 小手機 (小於 500px)：強制單欄顯示 */
+        @media (max-width: 500px) {
+            .editor-container, .editor-container.portrait-mode {
+                grid-template-columns: 1fr; 
             }
-            .editor-container.portrait-mode {
-                grid-template-columns: 1fr 1fr; /* 直式照片手機上一行兩張 */
-            }
-            
             .tabs .tab { font-size: 14px; padding: 12px 5px; }
         }
 
@@ -277,7 +283,7 @@
     <!-- 側邊欄 -->
     <div class="sidebar">
         <div>
-            <h1>劇照編輯器</span></h1>
+            <h1>劇照編輯器</h1>
             <div class="subtitle">V7</div>
             
             <div id="modeIndicator" class="mode-indicator active-landscape">目前設定模式：橫式 (Landscape)</div>
@@ -595,7 +601,8 @@
 
             const config = {
                 baseScale: baseScale, userScale: 1.0,
-                origW: imgObj.width, origH: imgObj.height, x: 0, y: 0
+                origW: imgObj.width, origH: imgObj.height, x: 0, y: 0,
+                aiDetected: !!cropData // <--- Store AI detection status here
             };
 
             if (cropData) {
@@ -673,9 +680,8 @@
                 const toolsRight = document.createElement('div');
                 toolsRight.className = 'tools-right';
                 
-                // AI Badge
-                const aiKey = state.mode === 'landscape' ? 'landscape' : 'portrait';
-                if(source.aiData[aiKey]) {
+                // AI Indicator Badge in Toolbar (Fix: use item.cropConfig.aiDetected)
+                if(item.cropConfig.aiDetected) {
                     const aiBadge = document.createElement('div');
                     aiBadge.className = 'ai-badge-icon';
                     aiBadge.innerHTML = 'AI';
