@@ -54,6 +54,11 @@
         h1 { font-size: 1.2rem; margin: 0 0 5px 0; color: white; letter-spacing: 1px; }
         .subtitle { font-size: 0.8rem; color: #888; margin-bottom: 20px; }
         
+        .ai-badge { 
+            background: linear-gradient(45deg, #00d2ff, #d84bf7); 
+            color: black; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 10px; margin-left: 5px;
+        }
+        
         .mode-indicator {
             font-size: 11px; padding: 4px 8px; border-radius: 4px; margin-bottom: 15px;
             background: #333; color: #aaa; text-align: center; border: 1px solid #444;
@@ -114,16 +119,16 @@
         .tab.active { background: #000; color: var(--accent-color); border-top: 3px solid var(--accent-color); }
         .tab:hover:not(.active) { background: #2a2a2a; color: #ddd; }
 
-        /* 網格編輯區 - RWD 核心設定 */
+        /* 網格編輯區 */
         .editor-container {
             flex: 1; overflow-y: auto; padding: 20px;
             display: grid; gap: 25px; align-content: start;
-            /* 桌面版：橫式卡片最小寬度 380px，確保夠大 */
+            /* 桌面版：橫式卡片最小寬度 380px */
             grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
         }
         
         .editor-container.portrait-mode {
-            /* 桌面版：直式卡片最小寬度 300px，確保夠大 */
+            /* 桌面版：直式卡片最小寬度 300px */
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
         }
 
@@ -137,7 +142,7 @@
         
         .canvas-wrapper {
             position: relative; background: #000; cursor: grab; overflow: hidden; width: 100%;
-            touch-action: none; /* 防止在手機上拖曳圖片時觸發滾動 */
+            touch-action: none;
         }
         .canvas-wrapper:active { cursor: grabbing; }
 
@@ -213,66 +218,25 @@
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .loading-subtitle { color: #888; font-size: 12px; margin-top: 5px; }
 
-        /* --- RWD 響應式設計 (強化版) --- */
-        
-        /* 平板/小筆電 (小於 1100px)：稍微縮小卡片，保持並排 */
+        /* --- RWD 響應式設計 --- */
         @media (max-width: 1100px) {
-            .editor-container {
-                grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            }
-            .editor-container.portrait-mode {
-                grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-            }
+            .editor-container { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+            .editor-container.portrait-mode { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
         }
 
-        /* 直立平板/手機 (小於 900px)：改為垂直佈局 */
         @media (max-width: 900px) {
-            body {
-                flex-direction: column;
-                height: auto; /* 允許頁面捲動 */
-                overflow-y: auto;
-            }
-
-            .sidebar {
-                width: 100%;
-                height: auto;
-                max-height: none;
-                border-right: none;
-                border-bottom: 1px solid var(--border-color);
-                padding: 15px;
-            }
-
-            .main-area {
-                height: auto;
-                min-height: 500px;
-                overflow: visible;
-            }
-
-            .editor-container {
-                overflow-y: visible; 
-                padding: 15px;
-                /* 手機寬度下，確保卡片夠大 */
-                grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-            }
-            
-            .editor-container.portrait-mode {
-                grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-            }
-
+            body { flex-direction: column; height: auto; overflow-y: auto; }
+            .sidebar { width: 100%; height: auto; max-height: none; border-right: none; border-bottom: 1px solid var(--border-color); padding: 15px; }
+            .main-area { height: auto; min-height: 500px; overflow: visible; }
+            .editor-container { overflow-y: visible; padding: 15px; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); }
+            .editor-container.portrait-mode { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
             .file-btn { width: 100%; }
-            
-            .footer-credit {
-                display: flex; align-items: center; justify-content: center; gap: 10px;
-                padding-bottom: 0;
-            }
+            .footer-credit { display: flex; align-items: center; justify-content: center; gap: 10px; padding-bottom: 0; }
             .footer-credit br { display: none; }
         }
 
-        /* 小手機 (小於 500px)：強制單欄顯示 */
         @media (max-width: 500px) {
-            .editor-container, .editor-container.portrait-mode {
-                grid-template-columns: 1fr; 
-            }
+            .editor-container, .editor-container.portrait-mode { grid-template-columns: 1fr; }
             .tabs .tab { font-size: 14px; padding: 12px 5px; }
         }
 
@@ -283,8 +247,8 @@
     <!-- 側邊欄 -->
     <div class="sidebar">
         <div>
-            <h1>劇照編輯器</h1>
-            <div class="subtitle">V7</div>
+            <h1>劇照編輯器 <span class="ai-badge">AI + 調色</span> </h1>
+            <div class="subtitle">V7.02</div>
             
             <div id="modeIndicator" class="mode-indicator active-landscape">目前設定模式：橫式 (Landscape)</div>
 
@@ -311,9 +275,15 @@
             </div>
 
             <div class="control-group">
-                <label>版權文字 (<span id="textModeLabel" style="color:var(--accent-color)">橫式</span>)</label>
+                <!-- 這裡修改了：標籤不再顯示模式，改為提示共用 -->
+                <label>版權文字</label>
                 <input type="text" id="copyrightText" placeholder="例如：©2025 Love Begins in the World of If Production committee・MBS">
-                <div class="slider-row" style="margin-top:10px;"><label>文字大小</label><span class="slider-val" id="fontSizeVal">1.2</span></div>
+                
+                <!-- 只有文字大小分開設定 -->
+                <div class="slider-row" style="margin-top:10px;">
+                    <label>文字大小 (<span id="textModeLabel" style="color:var(--accent-color)">橫式</span>)</label>
+                    <span class="slider-val" id="fontSizeVal">1.2</span>
+                </div>
                 <input type="range" id="fontSizeScale" min="0.5" max="3.0" step="0.1" value="1.2">
             </div>
 
@@ -374,18 +344,21 @@
         const SIZE_PORTRAIT = { w: 1080, h: 1350, name: 'Vertical' };
 
         // --- State ---
-        // Settings now separated by mode
+        // Settings: copyrightText is now SHARED (at top level for convenience or handled in code)
+        // We keep the structure but will sync copyrightText across modes or pull from a common place.
+        // Actually, let's make it explicitly shared in the object structure to avoid confusion.
         let globalSettings = {
+            common: {
+                copyrightText: ""
+            },
             landscape: {
                 logoScale: 50, logoBottom: 0,
                 gradHeight: 25, gradOpacity: 0.7,
-                copyrightText: "",
                 fontSize: 1.2
             },
             portrait: {
                 logoScale: 50, logoBottom: 0,
                 gradHeight: 25, gradOpacity: 0.7,
-                copyrightText: "",
                 fontSize: 1.2
             }
         };
@@ -393,13 +366,8 @@
         let state = {
             mode: 'landscape',
             logo: null,
-            // Source images store the shared data (image object, filters)
-            sourceImages: [], // { id, file, imgObj, adjustments, aiData }
-            // Items lists are completely separate for Layout
-            items: {
-                landscape: [], // { id, sourceId, cropConfig, selected }
-                portrait: []   // { id, sourceId, cropConfig, selected }
-            }
+            sourceImages: [], 
+            items: { landscape: [], portrait: [] }
         };
 
         // --- DOM Elements ---
@@ -436,7 +404,6 @@
 
         // --- Init & Listeners ---
         
-        // Tab Switch
         els.tabs.forEach(tab => {
             tab.addEventListener('click', () => {
                 els.tabs.forEach(t => t.classList.remove('active'));
@@ -446,61 +413,62 @@
                 if(state.mode === 'portrait') els.editorContainer.classList.add('portrait-mode');
                 else els.editorContainer.classList.remove('portrait-mode');
 
-                updateSidebarInputs(); // Refresh inputs for new mode
+                updateSidebarInputs(); 
                 renderGrid();
             });
         });
 
-        // Update Inputs based on current mode settings
         function updateSidebarInputs() {
             const s = globalSettings[state.mode];
             
+            // Independent settings
             els.logoScale.value = s.logoScale; els.logoScaleVal.innerText = s.logoScale + '%';
             els.logoBottom.value = s.logoBottom; els.logoBottomVal.innerText = s.logoBottom + '%';
             els.gradHeight.value = s.gradHeight; els.gradHeightVal.innerText = s.gradHeight + '%';
             els.gradOpacity.value = s.gradOpacity; els.gradOpacityVal.innerText = s.gradOpacity;
-            els.copyright.value = s.copyrightText;
             els.fontSize.value = s.fontSize; els.fontSizeVal.innerText = s.fontSize;
 
-            // Update Visual Labels
+            // Shared setting
+            els.copyright.value = globalSettings.common.copyrightText;
+
+            // Visual updates
             const modeName = state.mode === 'landscape' ? '橫式' : '直式';
             els.modeIndicator.innerText = `目前設定模式：${modeName}`;
             els.modeIndicator.className = `mode-indicator active-${state.mode}`;
             els.textModeLabel.innerText = modeName;
             els.logoModeLabel.innerText = modeName;
             
-            // Update button text
             els.dlBtn.innerHTML = `<span>⬇</span> 下載${modeName} (選取項目)`;
-            
             updateUI();
         }
 
-        // Real-time Inputs - Update Global Settings for CURRENT MODE
-        const inputKeys = ['logoScale', 'logoBottom', 'gradHeight', 'gradOpacity', 'copyright', 'fontSize'];
-        
-        // Map DOM IDs to Settings Keys
-        const domMap = {
+        // Handle Shared Input (Copyright Text)
+        els.copyright.addEventListener('input', (e) => {
+            globalSettings.common.copyrightText = e.target.value;
+            redrawAllCanvases();
+        });
+
+        // Handle Independent Inputs
+        const independentInputs = {
             'logoScale': 'logoScale', 'logoBottom': 'logoBottom', 
             'gradHeight': 'gradHeight', 'gradOpacity': 'gradOpacity', 
-            'copyrightText': 'copyrightText', 'fontSizeScale': 'fontSize'
+            'fontSizeScale': 'fontSize'
         };
 
-        Object.keys(domMap).forEach(domId => {
+        Object.keys(independentInputs).forEach(domId => {
             const el = document.getElementById(domId);
-            const settingKey = domMap[domId];
+            const settingKey = independentInputs[domId];
             
             el.addEventListener('input', (e) => {
-                // 1. Update State
+                // Update CURRENT mode settings
                 globalSettings[state.mode][settingKey] = e.target.value;
                 
-                // 2. Update Display Value if exists
+                // Update Display Value
                 const valDisplay = document.getElementById(domId + 'Val');
                 if(valDisplay) {
                     let suffix = (settingKey === 'gradOpacity' || settingKey === 'fontSize') ? '' : '%';
                     valDisplay.innerText = e.target.value + suffix;
                 }
-                
-                // 3. Redraw ONLY active mode canvases
                 redrawAllCanvases();
             });
         });
@@ -584,7 +552,6 @@
             renderGrid(); 
         });
 
-        // --- SmartCrop Logic ---
         async function analyzeComposition(img, targetW, targetH) {
             try {
                 const result = await smartcrop.crop(img, { width: targetW, height: targetH });
@@ -602,7 +569,7 @@
             const config = {
                 baseScale: baseScale, userScale: 1.0,
                 origW: imgObj.width, origH: imgObj.height, x: 0, y: 0,
-                aiDetected: !!cropData // <--- Store AI detection status here
+                aiDetected: !!cropData
             };
 
             if (cropData) {
@@ -638,8 +605,6 @@
             }
         }
 
-        // --- Rendering ---
-
         function updateUI() {
             const currentList = state.items[state.mode];
             const selectedCount = currentList.filter(item => item.selected).length;
@@ -660,14 +625,12 @@
             const targetSize = state.mode === 'landscape' ? SIZE_LANDSCAPE : SIZE_PORTRAIT;
             
             currentList.forEach((item) => {
-                // Find source data
                 const source = state.sourceImages.find(s => s.id === item.sourceId);
                 if(!source) return;
 
                 const card = document.createElement('div');
                 card.className = `edit-card ${item.selected ? 'selected' : 'unselected'}`;
                 
-                // Tools Overlay
                 const tools = document.createElement('div');
                 tools.className = 'card-tools';
                 
@@ -680,7 +643,6 @@
                 const toolsRight = document.createElement('div');
                 toolsRight.className = 'tools-right';
                 
-                // AI Indicator Badge in Toolbar (Fix: use item.cropConfig.aiDetected)
                 if(item.cropConfig.aiDetected) {
                     const aiBadge = document.createElement('div');
                     aiBadge.className = 'ai-badge-icon';
@@ -705,7 +667,6 @@
                 tools.appendChild(toolsRight);
                 card.appendChild(tools);
 
-                // Canvas
                 const wrapper = document.createElement('canvas-wrapper');
                 wrapper.className = 'canvas-wrapper';
                 
@@ -718,17 +679,15 @@
                 canvas.height = uiH;
                 canvas.style.display = 'block';
                 canvas.style.width = '100%';
-                canvas.style.height = 'auto'; // RWD: Ensure height scales with width
-                canvas.dataset.itemId = item.id; // Link canvas to specific item
+                canvas.style.height = 'auto'; 
+                canvas.dataset.itemId = item.id;
                 
                 setupDrag(canvas, item, previewScale);
                 wrapper.appendChild(canvas);
                 
-                // Controls Area
                 const controls = document.createElement('div');
                 controls.className = 'card-controls';
                 
-                // Zoom
                 const row1 = document.createElement('div');
                 row1.className = 'control-row';
                 row1.innerHTML = `<div class="control-label">🔍 縮放</div>`;
@@ -741,7 +700,6 @@
                 });
                 row1.appendChild(zoomInput);
 
-                // Color Toggle
                 const colorBtn = document.createElement('div');
                 colorBtn.className = 'color-btn';
                 colorBtn.innerHTML = `🎨 調色`;
@@ -753,7 +711,6 @@
                 row1.appendChild(colorBtn);
                 controls.appendChild(row1);
 
-                // Filter Panel (Adjusts Shared Source!)
                 const filters = document.createElement('div');
                 filters.className = 'filter-panel';
                 
@@ -766,7 +723,6 @@
                     input.type = 'range'; input.min = '0'; input.max = '200'; input.step = '1'; input.value = source.adjustments[key];
                     input.addEventListener('input', (e) => {
                         source.adjustments[key] = parseInt(e.target.value);
-                        // When color changes, we need to redraw ALL items that use this source
                         redrawAllUsingSource(source.id);
                     });
                     row.appendChild(input);
@@ -787,12 +743,9 @@
                 card.appendChild(info);
                 els.editorContainer.appendChild(card);
 
-                // Initial Draw
                 drawCanvas(canvas, item, source, previewScale);
             });
         }
-
-        // --- Actions ---
 
         function toggleImageSelection(itemId) {
             const list = state.items[state.mode];
@@ -818,15 +771,13 @@
             if (index === -1) return;
             const originalItem = list[index];
             
-            // Create new item, referencing same source, copying config
             const newItem = {
                 id: 'item_' + Date.now() + Math.random(),
                 sourceId: originalItem.sourceId,
-                cropConfig: { ...originalItem.cropConfig }, // Shallow copy config for independence
+                cropConfig: { ...originalItem.cropConfig }, 
                 selected: originalItem.selected
             };
             
-            // Insert into CURRENT mode list only
             list.splice(index + 1, 0, newItem);
             updateUI();
             renderGrid();
@@ -856,7 +807,6 @@
                 let newX = initialImgX + deltaX;
                 let newY = initialImgY + deltaY;
 
-                // Bounds check
                 const config = item.cropConfig;
                 if (newX > 0) newX = 0;
                 if (newX < config.minX) newX = config.minX;
@@ -866,7 +816,6 @@
                 config.x = newX;
                 config.y = newY;
                 
-                // Find source to draw
                 const source = state.sourceImages.find(s => s.id === item.sourceId);
                 if(source) drawCanvas(canvas, item, source, uiScale);
             };
@@ -877,9 +826,6 @@
             window.addEventListener('mouseup', onMouseUp);
         }
 
-        // Helper to find all canvases using a specific source ID and redraw them
-        // This handles the case where changing color in Landscape updates Portrait view invisibly, 
-        // or if we have duplicates in the same view.
         function redrawAllUsingSource(sourceId) {
             const canvases = els.editorContainer.querySelectorAll('canvas');
             canvases.forEach(cvs => {
@@ -914,20 +860,18 @@
             ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
 
             const config = item.cropConfig;
-            const settings = globalSettings[state.mode]; // Get CURRENT mode settings
+            const settings = globalSettings[state.mode]; 
+            const sharedText = globalSettings.common.copyrightText; // Use shared text
 
-            // 1. Filters
             ctx.save();
             const adj = source.adjustments;
             if (adj) {
                 ctx.filter = `brightness(${adj.brightness}%) contrast(${adj.contrast}%) saturate(${adj.saturation}%)`;
             }
 
-            // 2. Image
             ctx.drawImage(source.imgObj, config.x * scaleFactor, config.y * scaleFactor, config.currentW * scaleFactor, config.currentH * scaleFactor);
             ctx.restore();
 
-            // 3. Gradient (Uses Global Mode Settings)
             const gHeightPercent = parseInt(settings.gradHeight) / 100;
             if (gHeightPercent > 0) {
                 const gHeight = targetH * gHeightPercent;
@@ -939,7 +883,6 @@
                 ctx.fillRect(0, targetH - gHeight, targetW, gHeight);
             }
 
-            // 4. Logo
             if (state.logo) {
                 const logoScaleP = parseInt(settings.logoScale) / 100;
                 const logoBottomP = parseInt(settings.logoBottom) / 100;
@@ -950,8 +893,7 @@
                 ctx.drawImage(state.logo, logoX, logoY, drawLogoW, drawLogoH);
             }
 
-            // 5. Text
-            if (settings.copyrightText) {
+            if (sharedText) {
                 const fontSizeBase = targetH * 0.012; 
                 const fontSize = fontSizeBase * parseFloat(settings.fontSize);
                 ctx.font = `${fontSize}px "Helvetica Neue", Arial, sans-serif`;
@@ -959,7 +901,7 @@
                 ctx.textAlign = "right"; ctx.textBaseline = "bottom";
                 ctx.shadowColor = "rgba(0,0,0,0.8)"; ctx.shadowBlur = 2; ctx.shadowOffsetX = 1; ctx.shadowOffsetY = 1;
                 const marginX = targetW * 0.02; const marginY = targetH * 0.015; 
-                ctx.fillText(settings.copyrightText, targetW - marginX, targetH - marginY);
+                ctx.fillText(sharedText, targetW - marginX, targetH - marginY);
             }
         }
 
@@ -975,7 +917,17 @@
             });
         }
 
-        // --- Download Logic ---
+        function drawHighRes(item, mode) {
+            const size = mode === 'landscape' ? SIZE_LANDSCAPE : SIZE_PORTRAIT;
+            const canvas = document.createElement('canvas');
+            canvas.width = size.w;
+            canvas.height = size.h;
+            
+            const source = state.sourceImages.find(s => s.id === item.sourceId);
+            drawCanvas(canvas, item, source, 1);
+            return canvas;
+        }
+
         els.dlBtn.addEventListener('click', () => {
             const targetMode = state.mode;
             const currentList = state.items[targetMode];
@@ -993,7 +945,6 @@
             
             const size = targetMode === 'landscape' ? SIZE_LANDSCAPE : SIZE_PORTRAIT;
 
-            // Async Loop
             (async () => {
                 for (let i = 0; i < selectedItems.length; i++) {
                     const item = selectedItems[i];
@@ -1001,22 +952,14 @@
                     
                     els.progress.innerText = `正在處理 ${i+1}/${selectedItems.length}...`;
                     
-                    // Draw High Res
-                    const canvas = document.createElement('canvas');
-                    canvas.width = size.w;
-                    canvas.height = size.h;
-                    drawCanvas(canvas, item, source, 1); // Scale 1 for High Res
-                    
+                    const canvas = drawHighRes(item, targetMode);
                     const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.95));
                     
-                    // Naming Logic
                     let filename;
                     if (prefixInput) {
                         const seq = (i + 1).toString().padStart(3, '0');
                         filename = `${prefixInput}_${seq}.jpg`;
                     } else {
-                        // Need to handle duplicates naming smartly
-                        // Find all selected items that come from the same source file
                         const siblings = selectedItems.filter(it => {
                             const s = state.sourceImages.find(src => src.id === it.sourceId);
                             return s.file.name === source.file.name;
