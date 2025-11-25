@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>劇照浮水印編輯器 - GagaOOLala (beta)</title>
+    <link rel="apple-touch-icon" sizes="180x180" href="favicon/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon/favicon-16x16.png">
+    <link rel="manifest" href="favicon/site.webmanifest">
+    <!-- 引入必要的函式庫 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/smartcrop/2.0.3/smartcrop.min.js"></script>
+    
+    <style>
+        :root {
+            --bg-color: #121212;
+            --panel-bg: #1e1e1e;
+            --text-color: #e0e0e0;
+            --accent-color: #00d2ff;
+            --ai-color: #d84bf7;
+            --filter-color: #ffaa00;
+            --danger-color: #ff4444;
+            --border-color: #444;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* 左側 Sidebar */
+        .sidebar {
+            width: 360px;
+            background: var(--panel-bg);
+            padding: 20px;
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            flex-shrink: 0;
+            z-index: 20;
+            transition: all 0.3s ease;
+        }
+
+        h1 { font-size: 1.2rem; margin: 0 0 5px 0; color: white; letter-spacing: 1px; }
+        .subtitle { font-size: 0.8rem; color: #888; margin-bottom: 20px; }
+        
+        .mode-indicator {
+            font-size: 11px; padding: 4px 8px; border-radius: 4px; margin-bottom: 15px;
+            background: #333; color: #aaa; text-align: center; border: 1px solid #444;
+        }
+        .mode-indicator.active-landscape { border-color: var(--accent-color); color: var(--accent-color); }
+        .mode-indicator.active-portrait { border-color: #ff9800; color: #ff9800; }
+
+        .control-group { margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 15px; }
+        .control-group:last-child { border-bottom: none; }
+        
+        label { display: block; margin-bottom: 8px; font-size: 0.85rem; color: #bbb; }
+        input[type="text"] {
+            width: 100%; padding: 10px; border-radius: 4px; border: 1px solid #555; background: #2a2a2a; color: white; 
+            font-size: 14px;
+        }
+        input[type="text"]::placeholder { color: #666; font-style: italic; }
+
+        .file-btn {
+            display: block; width: 100%; padding: 10px; background: #333; color: #ccc;
+            text-align: center; border: 1px dashed #666; cursor: pointer; border-radius: 4px; margin-bottom: 5px;
+            box-sizing: border-box;
+        }
+        .file-btn:hover { border-color: var(--accent-color); color: white; }
+        input[type="file"] { display: none; }
+
+        .slider-row { display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 2px;}
+        .slider-val { color: var(--accent-color); font-family: monospace; }
+        input[type="range"] { width: 100%; cursor: pointer; accent-color: var(--accent-color); margin: 5px 0 15px 0; }
+
+        .action-area { margin-top: auto; padding-top: 20px; }
+        .btn {
+            width: 100%; padding: 12px; border: none; border-radius: 6px; 
+            font-size: 14px; font-weight: bold; cursor: pointer; margin-bottom: 10px;
+            transition: 0.2s; display: flex; justify-content: center; align-items: center; gap: 8px;
+        }
+        .btn-primary { background: var(--accent-color); color: #000; }
+        .btn-primary:hover { background: #66e0ff; }
+        .btn-secondary { background: #444; color: white; }
+        .btn-secondary:hover { background: #555; }
+        .btn-outline { background: transparent; border: 1px solid #555; color: #aaa; padding: 8px; font-size: 12px; margin-bottom: 15px; }
+        .btn-outline:hover { border-color: #888; color: white; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .footer-credit {
+            text-align: center; font-size: 11px; color: #555; margin-top: 10px;
+            border-top: 1px solid #333; padding-top: 15px; font-weight: 500;
+        }
+
+        /* 右側主區域 */
+        .main-area {
+            flex: 1; display: flex; flex-direction: column; background: #000; overflow: hidden;
+        }
+
+        .tabs { display: flex; background: #252525; border-bottom: 1px solid var(--border-color); flex-shrink: 0; }
+        .tab {
+            padding: 15px 20px; cursor: pointer; color: #888; font-weight: bold; transition: 0.2s; border-right: 1px solid #333; flex: 1; text-align: center;
+            white-space: nowrap;
+        }
+        .tab.active { background: #000; color: var(--accent-color); border-top: 3px solid var(--accent-color); }
+        .tab:hover:not(.active) { background: #2a2a2a; color: #ddd; }
+
+        /* 網格編輯區 */
+        .editor-container {
+            flex: 1; overflow-y: auto; padding: 20px;
+            display: grid; gap: 25px; align-content: start;
+            /* RWD: 最小寬度設定 */
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        }
+        
+        .editor-container.portrait-mode {
+            /* 直式可以稍微窄一點 */
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        }
+
+        .edit-card {
+            background: #1a1a1a; border: 1px solid #333; border-radius: 8px; overflow: hidden;
+            display: flex; flex-direction: column; position: relative;
+            transition: border 0.2s; box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        .edit-card.selected { border: 1px solid var(--accent-color); }
+        .edit-card.unselected { opacity: 0.7; }
+        
+        /* === 還原 V6.5 的 Canvas Wrapper 設定 === */
+        .canvas-wrapper {
+            position: relative; 
+            background: #000; 
+            /* 只設定寬度 100%，高度不要設，讓 Canvas 自己撐開 */
+            width: 100%;
+            cursor: grab;
+            overflow: hidden;
+            touch-action: none; 
+        }
+        .canvas-wrapper:active { cursor: grabbing; }
+
+        /* AI 指示器 */
+        .ai-badge-icon {
+            background: linear-gradient(45deg, #00d2ff, #d84bf7);
+            color: white; border-radius: 4px; font-size: 10px; font-weight: bold;
+            padding: 0 6px; height: 26px; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5); cursor: default; border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        /* 卡片底部控制區 */
+        .card-controls { padding: 10px; background: #222; border-top: 1px solid #333; display: flex; flex-direction: column; gap: 8px;}
+        .control-row { display: flex; align-items: center; gap: 8px; width: 100%; }
+        .control-label { font-size: 11px; color: #888; min-width: 45px; display: flex; align-items: center; gap: 4px; }
+        input[type=range] { margin: 0; flex: 1; height: 4px; }
+
+        .color-btn {
+            background: #333; border: 1px solid #555; color: #ccc; font-size: 11px; padding: 4px 8px; border-radius: 4px; cursor: pointer;
+            transition: 0.2s; display: flex; align-items: center; gap: 4px; margin-left: auto;
+            white-space: nowrap;
+        }
+        .color-btn:hover, .color-btn.active { background: var(--filter-color); color: black; border-color: var(--filter-color); }
+
+        .filter-panel {
+            background: #181818; padding: 8px; border-radius: 4px; margin-top: 5px;
+            display: none; border: 1px solid #333;
+        }
+        .filter-panel.show { display: block; animation: fadeIn 0.2s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+
+        .card-info {
+            padding: 8px 10px; background: #1a1a1a; font-size: 11px; color: #666; border-top: 1px solid #2a2a2a;
+            white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+        }
+
+        .card-tools {
+            position: absolute; top: 0; left: 0; width: 100%; padding: 8px; box-sizing: border-box;
+            display: flex; justify-content: space-between; z-index: 5;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.7), transparent);
+            pointer-events: none; 
+        }
+        .tools-right { display: flex; gap: 5px; pointer-events: auto; align-items: center; }
+
+        .checkbox-wrapper { pointer-events: auto; display: flex; align-items: center; cursor: pointer; }
+        .custom-checkbox {
+            width: 18px; height: 18px; border: 2px solid white; background: rgba(0,0,0,0.5); border-radius: 4px;
+            display: flex; align-items: center; justify-content: center; transition: 0.2s;
+        }
+        .checkbox-wrapper.active .custom-checkbox { background: var(--accent-color); border-color: var(--accent-color); }
+        .checkbox-wrapper.active .custom-checkbox::after { content: '✔'; font-size: 12px; color: #000; font-weight: bold; }
+
+        .icon-btn {
+            background: rgba(0,0,0,0.5); border: 1px solid #777; color: #ddd; border-radius: 4px;
+            width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; cursor: pointer;
+            font-size: 14px; transition: 0.2s;
+        }
+        .icon-btn:hover { background: #444; border-color: white; color: white; }
+        .delete-btn:hover { background: var(--danger-color); border-color: var(--danger-color); }
+
+        .empty-state {
+            grid-column: 1 / -1; height: 100%; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; color: #555; padding: 50px 0; text-align: center;
+        }
+
+        .loading-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9); z-index: 100;
+            justify-content: center; align-items: center; flex-direction: column;
+        }
+        .spinner {
+            border: 4px solid #333; border-top: 4px solid var(--accent-color);
+            border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .loading-subtitle { color: #888; font-size: 12px; margin-top: 5px; }
+
+        /* --- RWD 響應式設計 --- */
+        @media (max-width: 900px) {
+            body { flex-direction: column; height: auto; overflow-y: auto; }
+            .sidebar { width: 100%; height: auto; max-height: none; border-right: none; border-bottom: 1px solid var(--border-color); padding: 15px; }
+            .main-area { height: auto; min-height: 500px; overflow: visible; }
+            .editor-container { overflow-y: visible; padding: 15px; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); }
+            .editor-container.portrait-mode { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+            .file-btn { width: 100%; }
+            .footer-credit { display: flex; align-items: center; justify-content: center; gap: 10px; padding-bottom: 0; }
+            .footer-credit br { display: none; }
+        }
+
+        @media (max-width: 500px) {
+            .editor-container, .editor-container.portrait-mode { grid-template-columns: 1fr; }
+            .tabs .tab { font-size: 14px; padding: 12px 5px; }
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- 側邊欄 -->
+    <div class="sidebar">
+        <div>
+            <h1>劇照編輯器</h1>
+            <div class="subtitle">V8(beta)</div>
+            
+            <div id="modeIndicator" class="mode-indicator active-landscape">目前設定模式：橫式 (Landscape)</div>
+
+            <div class="control-group">
+                <label style="color:white;">📁 專案/影集代碼 (命名用)</label>
+                <input type="text" id="filenamePrefix" placeholder="例如: If_The_World (留空則用原檔名)">
+            </div>
+
+            <div class="control-group">
+                <label>1. 上傳 Logo (PNG)</label>
+                <label for="logoInput" class="file-btn" id="logoLabel">選擇 Logo</label>
+                <input type="file" id="logoInput" accept="image/png, image/jpeg">
+            </div>
+
+            <div class="control-group">
+                <label>2. 上傳劇照</label>
+                <label for="imageInput" class="file-btn">新增圖片</label>
+                <input type="file" id="imageInput" multiple accept="image/*">
+                
+                <div style="display:flex; justify-content:space-between; margin-top:10px; align-items:center;">
+                    <div style="font-size:12px; color:#aaa;">此模式已選: <span id="selectedCount" style="color:var(--accent-color);">0</span> 張</div>
+                    <button id="toggleSelectBtn" class="btn-outline">全選 / 取消</button>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>版權文字</label>
+                <input type="text" id="copyrightText" placeholder="例如：©2025 Love Begins in the World of If Production committee・MBS">
+                
+                <div class="slider-row" style="margin-top:10px;">
+                    <label>文字大小 (<span id="textModeLabel" style="color:var(---color)">橫式</span>)</label>
+                    <span class="slider-val" id="fontSizeVal">1.2</span>
+                </div>
+                <input type="range" id="fontSizeScale" min="0.5" max="3.0" step="0.1" value="1.2">
+            </div>
+
+            <div class="control-group">
+                <div class="slider-row"><label>Logo 縮放 (<span id="logoModeLabel" style="color:var(--accent-color)">橫式</span>)</label><span class="slider-val" id="logoScaleVal">50%</span></div>
+                <input type="range" id="logoScale" min="10" max="80" vaaccentlue="50">
+                
+                <div class="slider-row"><label>Logo 底部距離</label><span class="slider-val" id="logoBottomVal">0%</span></div>
+                <input type="range" id="logoBottom" min="0" max="20" value="0">
+            </div>
+
+            <div class="control-group">
+                <div class="slider-row"><label>黑色漸層高度</label><span class="slider-val" id="gradHeightVal">25%</span></div>
+                <input type="range" id="gradHeight" min="0" max="60" value="25">
+                
+                <div class="slider-row"><label>漸層濃度</label><span class="slider-val" id="gradOpacityVal">0.7</span></div>
+                <input type="range" id="gradOpacity" min="0" max="1" step="0.1" value="0.7">
+            </div>
+        </div>
+
+        <div class="action-area">
+            <button id="dlBtn" class="btn btn-primary" disabled>
+                <span>⬇</span> 下載目前模式 (選取項目)
+            </button>
+        </div>
+
+        <div class="footer-credit">
+            <img src="https://img.gagaoolala.com/assets/v2.1.1/img/ui/logo.png" alt="GagaOOLala Logo" width="120" height="26">
+            <br>
+            GagaOOLala 設計部開發
+        </div>
+    </div>
+
+    <!-- 主區域 -->
+    <div class="main-area">
+        <div class="tabs">
+            <div class="tab active" data-mode="landscape">橫式編輯區 (1920 x 1080)</div>
+            <div class="tab" data-mode="portrait">直式編輯區 (1080 x 1350)</div>
+        </div>
+
+        <div class="editor-container" id="editorContainer">
+            <div class="empty-state">
+                <h2>尚未載入劇照</h2>
+                <p>請從左側上傳圖片，AI 將自動分析構圖</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+        <div id="progressText" style="color:white; margin-top:15px; font-weight:bold;">處理中...</div>
+        <div id="progressSub" class="loading-subtitle">AI 正在分析照片構圖</div>
+    </div>
+
+    <script>
+        // --- Configuration ---
+        const SIZE_LANDSCAPE = { w: 1920, h: 1080, name: 'Horizontal' };
+        const SIZE_PORTRAIT = { w: 1080, h: 1350, name: 'Vertical' };
+
+        // --- State ---
+        let globalSettings = {
+            common: {
+                copyrightText: ""
+            },
+            landscape: {
+                logoScale: 50, logoBottom: 0,
+                gradHeight: 25, gradOpacity: 0.7,
+                fontSize: 1.2
+            },
+            portrait: {
+                logoScale: 50, logoBottom: 0,
+                gradHeight: 25, gradOpacity: 0.7,
+                fontSize: 1.2
+            }
+        };
+
+        let state = {
+            mode: 'landscape',
+            logo: null,
+            sourceImages: [], 
+            items: { landscape: [], portrait: [] }
+        };
+
+        // --- DOM Elements ---
+        const els = {
+            logoInput: document.getElementById('logoInput'),
+            imageInput: document.getElementById('imageInput'),
+            filenamePrefix: document.getElementById('filenamePrefix'),
+            editorContainer: document.getElementById('editorContainer'),
+            tabs: document.querySelectorAll('.tab'),
+            selectedCount: document.getElementById('selectedCount'),
+            toggleSelectBtn: document.getElementById('toggleSelectBtn'),
+            dlBtn: document.getElementById('dlBtn'),
+            loading: document.getElementById('loadingOverlay'),
+            progress: document.getElementById('progressText'),
+            progressSub: document.getElementById('progressSub'),
+            modeIndicator: document.getElementById('modeIndicator'),
+            textModeLabel: document.getElementById('textModeLabel'),
+            logoModeLabel: document.getElementById('logoModeLabel'),
+            // Inputs
+            logoScale: document.getElementById('logoScale'),
+            logoBottom: document.getElementById('logoBottom'),
+            gradHeight: document.getElementById('gradHeight'),
+            gradOpacity: document.getElementById('gradOpacity'),
+            copyright: document.getElementById('copyrightText'),
+            fontSize: document.getElementById('fontSizeScale'),
+            // Value Displays
+            logoScaleVal: document.getElementById('logoScaleVal'),
+            logoBottomVal: document.getElementById('logoBottomVal'),
+            gradHeightVal: document.getElementById('gradHeightVal'),
+            gradOpacityVal: document.getElementById('gradOpacityVal'),
+            fontSizeVal: document.getElementById('fontSizeVal')
+        };
+
+        // --- Init & Listeners ---
+        
+        els.tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                els.tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                state.mode = tab.dataset.mode;
+                
+                if(state.mode === 'portrait') els.editorContainer.classList.add('portrait-mode');
+                else els.editorContainer.classList.remove('portrait-mode');
+
+                updateSidebarInputs(); 
+                renderGrid();
+            });
+        });
+
+        function updateSidebarInputs() {
+            const s = globalSettings[state.mode];
+            
+            els.logoScale.value = s.logoScale; els.logoScaleVal.innerText = s.logoScale + '%';
+            els.logoBottom.value = s.logoBottom; els.logoBottomVal.innerText = s.logoBottom + '%';
+            els.gradHeight.value = s.gradHeight; els.gradHeightVal.innerText = s.gradHeight + '%';
+            els.gradOpacity.value = s.gradOpacity; els.gradOpacityVal.innerText = s.gradOpacity;
+            els.fontSize.value = s.fontSize; els.fontSizeVal.innerText = s.fontSize;
+            els.copyright.value = globalSettings.common.copyrightText;
+
+            const modeName = state.mode === 'landscape' ? '橫式' : '直式';
+            els.modeIndicator.innerText = `目前設定模式：${modeName}`;
+            els.modeIndicator.className = `mode-indicator active-${state.mode}`;
+            els.textModeLabel.innerText = modeName;
+            els.logoModeLabel.innerText = modeName;
+            els.dlBtn.innerHTML = `<span>⬇</span> 下載${modeName} (選取項目)`;
+            updateUI();
+        }
+
+        els.copyright.addEventListener('input', (e) => {
+            globalSettings.common.copyrightText = e.target.value;
+            redrawAllCanvases();
+        });
+
+        const independentInputs = {
+            'logoScale': 'logoScale', 'logoBottom': 'logoBottom', 
+            'gradHeight': 'gradHeight', 'gradOpacity': 'gradOpacity', 
+            'fontSizeScale': 'fontSize'
+        };
+
+        Object.keys(independentInputs).forEach(domId => {
+            const el = document.getElementById(domId);
+            const settingKey = independentInputs[domId];
+            el.addEventListener('input', (e) => {
+                globalSettings[state.mode][settingKey] = e.target.value;
+                const valDisplay = document.getElementById(domId + 'Val');
+                if(valDisplay) {
+                    let suffix = (settingKey === 'gradOpacity' || settingKey === 'fontSize') ? '' : '%';
+                    valDisplay.innerText = e.target.value + suffix;
+                }
+                redrawAllCanvases();
+            });
+        });
+
+        els.logoInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if(file) {
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        state.logo = img;
+                        document.getElementById('logoLabel').innerText = "✅ " + file.name;
+                        redrawAllCanvases();
+                    };
+                    img.src = evt.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        els.imageInput.addEventListener('change', async (e) => {
+            const files = Array.from(e.target.files);
+            if(files.length === 0) return;
+
+            els.loading.style.display = 'flex';
+            
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                els.progress.innerText = `正在載入 ${i+1}/${files.length}`;
+                els.progressSub.innerText = "AI 正在分析主體位置...";
+
+                const imgObj = await loadImage(file);
+                const sourceId = 'src_' + Date.now() + Math.random();
+
+                const cropLandscape = await analyzeComposition(imgObj, SIZE_LANDSCAPE.w, SIZE_LANDSCAPE.h);
+                const cropPortrait = await analyzeComposition(imgObj, SIZE_PORTRAIT.w, SIZE_PORTRAIT.h);
+
+                state.sourceImages.push({
+                    id: sourceId,
+                    file: file,
+                    imgObj: imgObj,
+                    adjustments: { brightness: 100, contrast: 100, saturation: 100 },
+                    aiData: { landscape: !!cropLandscape, portrait: !!cropPortrait }
+                });
+
+                const lConfig = createConfigFromAI(imgObj, SIZE_LANDSCAPE, cropLandscape);
+                state.items.landscape.push({
+                    id: 'item_' + Date.now() + Math.random(),
+                    sourceId: sourceId,
+                    cropConfig: lConfig,
+                    selected: true
+                });
+
+                const pConfig = createConfigFromAI(imgObj, SIZE_PORTRAIT, cropPortrait);
+                state.items.portrait.push({
+                    id: 'item_' + Date.now() + Math.random(),
+                    sourceId: sourceId,
+                    cropConfig: pConfig,
+                    selected: true
+                });
+            }
+
+            updateUI();
+            renderGrid();
+            els.loading.style.display = 'none';
+        });
+
+        els.toggleSelectBtn.addEventListener('click', () => {
+            const currentList = state.items[state.mode];
+            if(currentList.length === 0) return;
+            const hasUnselected = currentList.some(item => !item.selected);
+            currentList.forEach(item => item.selected = hasUnselected);
+            updateUI();
+            renderGrid(); 
+        });
+
+        async function analyzeComposition(img, targetW, targetH) {
+            try {
+                const result = await smartcrop.crop(img, { width: targetW, height: targetH });
+                return result.topCrop;
+            } catch (err) { return null; }
+        }
+
+        function createConfigFromAI(imgObj, targetSize, cropData) {
+            const ratioSrc = imgObj.width / imgObj.height;
+            const ratioTarget = targetSize.w / targetSize.h;
+            let baseScale;
+            if (ratioSrc > ratioTarget) baseScale = targetSize.h / imgObj.height;
+            else baseScale = targetSize.w / imgObj.width;
+
+            const config = {
+                baseScale: baseScale, userScale: 1.0,
+                origW: imgObj.width, origH: imgObj.height, x: 0, y: 0,
+                aiDetected: !!cropData
+            };
+
+            if (cropData) {
+                const cropCenterX = cropData.x + (cropData.width / 2);
+                const cropCenterY = cropData.y + (cropData.height / 2);
+                config.x = (targetSize.w / 2) - (cropCenterX * baseScale);
+                config.y = (targetSize.h / 2) - (cropCenterY * baseScale);
+            } else {
+                const scaledW = imgObj.width * baseScale;
+                const scaledH = imgObj.height * baseScale;
+                config.x = (targetSize.w - scaledW) / 2;
+                config.y = (targetSize.h - scaledH) / 2;
+            }
+            recalculateBounds(config, targetSize.w, targetSize.h, false);
+            return config;
+        }
+
+        function recalculateBounds(config, targetW, targetH, forceCenter = false) {
+            const totalScale = config.baseScale * config.userScale;
+            config.currentW = config.origW * totalScale;
+            config.currentH = config.origH * totalScale;
+            config.minX = targetW - config.currentW;
+            config.minY = targetH - config.currentH;
+
+            if (!forceCenter) {
+                if (config.x < config.minX) config.x = config.minX;
+                if (config.y < config.minY) config.y = config.minY;
+                if (config.x > 0) config.x = 0;
+                if (config.y > 0) config.y = 0;
+            } else {
+                config.x = (targetW - config.currentW) / 2;
+                config.y = (targetH - config.currentH) / 2;
+            }
+        }
+
+        function updateUI() {
+            const currentList = state.items[state.mode];
+            const selectedCount = currentList.filter(item => item.selected).length;
+            els.selectedCount.innerText = selectedCount;
+            els.dlBtn.disabled = selectedCount === 0;
+            els.toggleSelectBtn.disabled = currentList.length === 0;
+        }
+
+        function renderGrid() {
+            els.editorContainer.innerHTML = '';
+            const currentList = state.items[state.mode];
+            
+            if(currentList.length === 0) {
+                els.editorContainer.innerHTML = `<div class="empty-state"><h2>尚無${state.mode==='landscape'?'橫式':'直式'}圖片</h2></div>`;
+                return;
+            }
+
+            const targetSize = state.mode === 'landscape' ? SIZE_LANDSCAPE : SIZE_PORTRAIT;
+            
+            currentList.forEach((item) => {
+                const source = state.sourceImages.find(s => s.id === item.sourceId);
+                if(!source) return;
+
+                const card = document.createElement('div');
+                card.className = `edit-card ${item.selected ? 'selected' : 'unselected'}`;
+                
+                const tools = document.createElement('div');
+                tools.className = 'card-tools';
+                
+                const cbWrapper = document.createElement('div');
+                cbWrapper.className = `checkbox-wrapper ${item.selected ? 'active' : ''}`;
+                cbWrapper.innerHTML = `<div class="custom-checkbox"></div>`;
+                cbWrapper.onclick = (e) => { e.stopPropagation(); toggleImageSelection(item.id); };
+                tools.appendChild(cbWrapper);
+
+                const toolsRight = document.createElement('div');
+                toolsRight.className = 'tools-right';
+                
+                if(item.cropConfig.aiDetected) {
+                    const aiBadge = document.createElement('div');
+                    aiBadge.className = 'ai-badge-icon';
+                    aiBadge.innerHTML = 'AI';
+                    aiBadge.title = '已自動調整構圖';
+                    toolsRight.appendChild(aiBadge);
+                }
+
+                const dupBtn = document.createElement('div');
+                dupBtn.className = 'icon-btn';
+                dupBtn.innerHTML = '❐';
+                dupBtn.title = "複製 (僅限此模式)";
+                dupBtn.onclick = (e) => { e.stopPropagation(); duplicateImage(item.id); };
+                toolsRight.appendChild(dupBtn);
+
+                const delBtn = document.createElement('div');
+                delBtn.className = 'icon-btn delete-btn';
+                delBtn.innerHTML = '✕';
+                delBtn.onclick = (e) => { e.stopPropagation(); removeImage(item.id); };
+                toolsRight.appendChild(delBtn);
+
+                tools.appendChild(toolsRight);
+                card.appendChild(tools);
+
+                // === 還原 V6.5：使用 div wrapper 包裹 canvas，不強制高度 ===
+                const wrapper = document.createElement('div');
+                wrapper.className = 'canvas-wrapper';
+                
+                const previewScale = 0.25; 
+                const uiW = targetSize.w * previewScale;
+                const uiH = targetSize.h * previewScale;
+
+                const canvas = document.createElement('canvas');
+                canvas.width = uiW;
+                canvas.height = uiH;
+                // CSS 會自動處理：width 100%, height auto
+                canvas.style.display = 'block';
+                canvas.style.width = '100%';
+                
+                canvas.dataset.itemId = item.id;
+                
+                setupDrag(canvas, item, previewScale);
+                wrapper.appendChild(canvas);
+                
+                const controls = document.createElement('div');
+                controls.className = 'card-controls';
+                
+                const row1 = document.createElement('div');
+                row1.className = 'control-row';
+                row1.innerHTML = `<div class="control-label">🔍 縮放</div>`;
+                const zoomInput = document.createElement('input');
+                zoomInput.type = 'range'; zoomInput.min = '1'; zoomInput.max = '3'; zoomInput.step = '0.01'; zoomInput.value = item.cropConfig.userScale;
+                zoomInput.addEventListener('input', (e) => {
+                    item.cropConfig.userScale = parseFloat(e.target.value);
+                    recalculateBounds(item.cropConfig, targetSize.w, targetSize.h, false);
+                    drawCanvas(canvas, item, source, previewScale);
+                });
+                row1.appendChild(zoomInput);
+
+                const colorBtn = document.createElement('div');
+                colorBtn.className = 'color-btn';
+                colorBtn.innerHTML = `🎨 調色`;
+                colorBtn.onclick = () => {
+                    const panel = controls.querySelector('.filter-panel');
+                    panel.classList.toggle('show');
+                    colorBtn.classList.toggle('active');
+                };
+                row1.appendChild(colorBtn);
+                controls.appendChild(row1);
+
+                const filters = document.createElement('div');
+                filters.className = 'filter-panel';
+                
+                const createFilterSlider = (label, key, icon) => {
+                    const row = document.createElement('div');
+                    row.className = 'control-row';
+                    row.style.marginBottom = '5px';
+                    row.innerHTML = `<div class="control-label">${icon} ${label}</div>`;
+                    const input = document.createElement('input');
+                    input.type = 'range'; input.min = '0'; input.max = '200'; input.step = '1'; input.value = source.adjustments[key];
+                    input.addEventListener('input', (e) => {
+                        source.adjustments[key] = parseInt(e.target.value);
+                        redrawAllUsingSource(source.id);
+                    });
+                    row.appendChild(input);
+                    return row;
+                };
+
+                filters.appendChild(createFilterSlider('亮度', 'brightness', '☀'));
+                filters.appendChild(createFilterSlider('對比', 'contrast', '◑'));
+                filters.appendChild(createFilterSlider('飽和', 'saturation', '🍭'));
+                controls.appendChild(filters);
+
+                const info = document.createElement('div');
+                info.className = 'card-info';
+                info.innerText = source.file.name;
+
+                card.appendChild(wrapper);
+                card.appendChild(controls);
+                card.appendChild(info);
+                els.editorContainer.appendChild(card);
+
+                // Initial Draw
+                drawCanvas(canvas, item, source, previewScale);
+            });
+        }
+
+        function toggleImageSelection(itemId) {
+            const list = state.items[state.mode];
+            const item = list.find(x => x.id === itemId);
+            if(item) {
+                item.selected = !item.selected;
+                updateUI();
+                renderGrid(); 
+            }
+        }
+
+        function removeImage(itemId) {
+            if(confirm('確定要移除這張劇照嗎？')) {
+                state.items[state.mode] = state.items[state.mode].filter(x => x.id !== itemId);
+                updateUI();
+                renderGrid();
+            }
+        }
+
+        function duplicateImage(itemId) {
+            const list = state.items[state.mode];
+            const index = list.findIndex(x => x.id === itemId);
+            if (index === -1) return;
+            const originalItem = list[index];
+            
+            const newItem = {
+                id: 'item_' + Date.now() + Math.random(),
+                sourceId: originalItem.sourceId,
+                cropConfig: { ...originalItem.cropConfig }, 
+                selected: originalItem.selected
+            };
+            
+            list.splice(index + 1, 0, newItem);
+            updateUI();
+            renderGrid();
+        }
+
+        function setupDrag(canvas, item, uiScale) {
+            let isDragging = false;
+            let startX, startY, initialImgX, initialImgY;
+
+            const onMouseDown = (e) => {
+                isDragging = true;
+                startX = e.clientX; startY = e.clientY;
+                initialImgX = item.cropConfig.x;
+                initialImgY = item.cropConfig.y;
+                canvas.parentElement.style.cursor = 'grabbing';
+            };
+
+            const onMouseMove = (e) => {
+                if (!isDragging) return;
+                e.preventDefault();
+                // Visual scale factor
+                const rect = canvas.getBoundingClientRect();
+                const visualScaleX = canvas.width / rect.width;
+                const visualScaleY = canvas.height / rect.height;
+                
+                const deltaX = (e.clientX - startX) * visualScaleX * 1.2; 
+                const deltaY = (e.clientY - startY) * visualScaleY * 1.2;
+
+                let newX = initialImgX + deltaX;
+                let newY = initialImgY + deltaY;
+
+                const config = item.cropConfig;
+                if (newX > 0) newX = 0;
+                if (newX < config.minX) newX = config.minX;
+                if (newY > 0) newY = 0;
+                if (newY < config.minY) newY = config.minY;
+
+                config.x = newX;
+                config.y = newY;
+                
+                const source = state.sourceImages.find(s => s.id === item.sourceId);
+                if(source) drawCanvas(canvas, item, source, uiScale);
+            };
+
+            const onMouseUp = () => { isDragging = false; canvas.parentElement.style.cursor = 'grab'; };
+            canvas.addEventListener('mousedown', onMouseDown);
+            window.addEventListener('mousemove', onMouseMove); 
+            window.addEventListener('mouseup', onMouseUp);
+        }
+
+        function redrawAllUsingSource(sourceId) {
+            const canvases = els.editorContainer.querySelectorAll('canvas');
+            canvases.forEach(cvs => {
+                const itemId = cvs.dataset.itemId;
+                const list = state.items[state.mode];
+                const item = list.find(x => x.id === itemId);
+                if(item && item.sourceId === sourceId) {
+                    const source = state.sourceImages.find(s => s.id === sourceId);
+                    drawCanvas(cvs, item, source, 0.25);
+                }
+            });
+        }
+
+        function redrawAllCanvases() {
+            const canvases = els.editorContainer.querySelectorAll('canvas');
+            canvases.forEach(cvs => {
+                const itemId = cvs.dataset.itemId;
+                const list = state.items[state.mode];
+                const item = list.find(x => x.id === itemId);
+                if(item) {
+                    const source = state.sourceImages.find(s => s.id === item.sourceId);
+                    if(source) drawCanvas(cvs, item, source, 0.25);
+                }
+            });
+        }
+
+        function drawCanvas(canvas, item, source, scaleFactor) {
+            const ctx = canvas.getContext('2d');
+            const targetW = canvas.width;
+            const targetH = canvas.height;
+            ctx.clearRect(0, 0, targetW, targetH);
+            ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+
+            const config = item.cropConfig;
+            const settings = globalSettings[state.mode]; 
+            const sharedText = globalSettings.common.copyrightText; 
+
+            ctx.save();
+            const adj = source.adjustments;
+            if (adj) {
+                ctx.filter = `brightness(${adj.brightness}%) contrast(${adj.contrast}%) saturate(${adj.saturation}%)`;
+            }
+
+            ctx.drawImage(source.imgObj, config.x * scaleFactor, config.y * scaleFactor, config.currentW * scaleFactor, config.currentH * scaleFactor);
+            ctx.restore();
+
+            const gHeightPercent = parseInt(settings.gradHeight) / 100;
+            if (gHeightPercent > 0) {
+                const gHeight = targetH * gHeightPercent;
+                const opacity = settings.gradOpacity;
+                const gradient = ctx.createLinearGradient(0, targetH - gHeight, 0, targetH);
+                gradient.addColorStop(0, "rgba(0,0,0,0)");
+                gradient.addColorStop(1, `rgba(0,0,0,${opacity})`);
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, targetH - gHeight, targetW, gHeight);
+            }
+
+            if (state.logo) {
+                const logoScaleP = parseInt(settings.logoScale) / 100;
+                const logoBottomP = parseInt(settings.logoBottom) / 100;
+                const drawLogoW = targetW * logoScaleP;
+                const drawLogoH = drawLogoW * (state.logo.height / state.logo.width);
+                const logoX = (targetW - drawLogoW) / 2;
+                const logoY = targetH - drawLogoH - (targetH * logoBottomP);
+                ctx.drawImage(state.logo, logoX, logoY, drawLogoW, drawLogoH);
+            }
+
+            if (sharedText) {
+                const fontSizeBase = targetH * 0.012; 
+                const fontSize = fontSizeBase * parseFloat(settings.fontSize);
+                ctx.font = `${fontSize}px "Helvetica Neue", Arial, sans-serif`;
+                ctx.fillStyle = "rgba(255,255,255,0.9)";
+                ctx.textAlign = "right"; ctx.textBaseline = "bottom";
+                ctx.shadowColor = "rgba(0,0,0,0.8)"; ctx.shadowBlur = 2; ctx.shadowOffsetX = 1; ctx.shadowOffsetY = 1;
+                const marginX = targetW * 0.02; const marginY = targetH * 0.015; 
+                ctx.fillText(sharedText, targetW - marginX, targetH - marginY);
+            }
+        }
+
+        function loadImage(file) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => resolve(img);
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function drawHighRes(item, mode) {
+            const size = mode === 'landscape' ? SIZE_LANDSCAPE : SIZE_PORTRAIT;
+            const canvas = document.createElement('canvas');
+            canvas.width = size.w;
+            canvas.height = size.h;
+            
+            const source = state.sourceImages.find(s => s.id === item.sourceId);
+            drawCanvas(canvas, item, source, 1);
+            return canvas;
+        }
+
+        els.dlBtn.addEventListener('click', () => {
+            const targetMode = state.mode;
+            const currentList = state.items[targetMode];
+            const selectedItems = currentList.filter(img => img.selected);
+            
+            if(selectedItems.length === 0) { alert("請至少選取一張照片"); return; }
+
+            els.loading.style.display = 'flex';
+            els.progressSub.innerText = "正在產生高解析度檔案...";
+            
+            const zip = new JSZip();
+            const prefixInput = els.filenamePrefix.value.trim();
+            const folderName = targetMode === 'landscape' ? "Horizontal_1920" : "Vertical_1080";
+            const folder = zip.folder(folderName);
+            
+            const size = targetMode === 'landscape' ? SIZE_LANDSCAPE : SIZE_PORTRAIT;
+
+            (async () => {
+                for (let i = 0; i < selectedItems.length; i++) {
+                    const item = selectedItems[i];
+                    const source = state.sourceImages.find(s => s.id === item.sourceId);
+                    
+                    els.progress.innerText = `正在處理 ${i+1}/${selectedItems.length}...`;
+                    
+                    const canvas = drawHighRes(item, targetMode);
+                    const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.95));
+                    
+                    let filename;
+                    if (prefixInput) {
+                        const seq = (i + 1).toString().padStart(3, '0');
+                        filename = `${prefixInput}_${seq}.jpg`;
+                    } else {
+                        const siblings = selectedItems.filter(it => {
+                            const s = state.sourceImages.find(src => src.id === it.sourceId);
+                            return s.file.name === source.file.name;
+                        });
+                        
+                        let copySuffix = "";
+                        if (siblings.length > 1) {
+                             const copyIndex = siblings.indexOf(item) + 1;
+                             copySuffix = `_v${copyIndex}`;
+                        }
+                        
+                        const suffix = targetMode === 'landscape' ? '_1920x1080' : '_1080x1350';
+                        filename = source.file.name.replace(/\.[^/.]+$/, "") + copySuffix + suffix + ".jpg";
+                    }
+                    folder.file(filename, blob);
+                }
+
+                els.progress.innerText = "打包壓縮中...";
+                const zipName = prefixInput ? `${prefixInput}_${targetMode}.zip` : `Watermarked_${targetMode}.zip`;
+                zip.generateAsync({type:"blob"}).then(function(content) {
+                    saveAs(content, zipName);
+                    els.loading.style.display = 'none';
+                });
+            })();
+        });
+
+    </script>
+</body>
+</html>
