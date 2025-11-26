@@ -67,6 +67,7 @@
 
         h1 { font-size: 1.2rem; margin: 0 0 5px 0; color: white; letter-spacing: 1px; }
         .subtitle { font-size: 0.8rem; color: #888; margin-bottom: 20px; }
+        
         .ai-badge { 
             background: linear-gradient(45deg, #00d2ff, #d84bf7); 
             color: black; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 10px; margin-left: 5px;
@@ -308,7 +309,7 @@
     <div class="sidebar">
         <div>
             <h1>劇照編輯器 <span class="ai-badge">雙AI</span></h1>
-            <div class="subtitle">V7</div>
+            <div class="subtitle">V7.01</div>
             
             <div id="modeIndicator" class="mode-indicator active-landscape">目前設定模式：橫式 (Landscape)</div>
 
@@ -348,25 +349,25 @@
                 
                 <div class="slider-row" style="margin-top:10px;">
                     <label>文字大小 (<span id="textModeLabel" style="color:var(--accent-color)">橫式</span>)</label>
-                    <span class="slider-val" id="fontSizeVal">1.2</span>
+                    <span class="slider-val" id="fontSizeVal">1.0</span>
                 </div>
-                <input type="range" id="fontSizeScale" min="0.5" max="3.0" step="0.1" value="1.2">
+                <input type="range" id="fontSizeScale" min="0.5" max="3.0" step="0.1" value="1.0">
             </div>
 
             <div class="control-group">
-                <div class="slider-row"><label>Logo 縮放 (<span id="logoModeLabel" style="color:var(--accent-color)">橫式</span>)</label><span class="slider-val" id="logoScaleVal">50%</span></div>
-                <input type="range" id="logoScale" min="10" max="80" value="50">
+                <div class="slider-row"><label>Logo 縮放 (<span id="logoModeLabel" style="color:var(--accent-color)">橫式</span>)</label><span class="slider-val" id="logoScaleVal">54%</span></div>
+                <input type="range" id="logoScale" min="10" max="100" value="54">
                 
                 <div class="slider-row"><label>Logo 底部距離</label><span class="slider-val" id="logoBottomVal">0%</span></div>
                 <input type="range" id="logoBottom" min="0" max="20" value="0">
             </div>
 
             <div class="control-group">
-                <div class="slider-row"><label>黑色漸層高度</label><span class="slider-val" id="gradHeightVal">25%</span></div>
-                <input type="range" id="gradHeight" min="0" max="60" value="25">
+                <div class="slider-row"><label>黑色漸層高度</label><span class="slider-val" id="gradHeightVal">20%</span></div>
+                <input type="range" id="gradHeight" min="0" max="60" value="20">
                 
-                <div class="slider-row"><label>漸層濃度</label><span class="slider-val" id="gradOpacityVal">0.7</span></div>
-                <input type="range" id="gradOpacity" min="0" max="1" step="0.1" value="0.7">
+                <div class="slider-row"><label>漸層濃度</label><span class="slider-val" id="gradOpacityVal">0.6</span></div>
+                <input type="range" id="gradOpacity" min="0" max="1" step="0.1" value="0.6">
             </div>
         </div>
 
@@ -380,7 +381,7 @@
             <img src="https://img.gagaoolala.com/assets/v2.1.1/img/ui/logo.png" alt="GagaOOLala Logo" width="120" height="26">
             <br>
             GagaOOLala 設計部開發
-            <br>
+             <br>
             <br>
             <button class="btn-outline" onclick="document.location='V605.html'">前往6.5版本</button>
         </div>
@@ -414,10 +415,23 @@
         const FACE_MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
 
         // --- State ---
+        // Updated Defaults based on user feedback
         let globalSettings = {
             common: { copyrightText: "" },
-            landscape: { logoScale: 50, logoBottom: 0, gradHeight: 25, gradOpacity: 0.7, fontSize: 1.2 },
-            portrait: { logoScale: 50, logoBottom: 0, gradHeight: 25, gradOpacity: 0.7, fontSize: 1.2 }
+            landscape: { 
+                logoScale: 54, // Default
+                logoBottom: 0, 
+                gradHeight: 20, // Default
+                gradOpacity: 0.6, // Default
+                fontSize: 1.0 // New Default
+            },
+            portrait: { 
+                logoScale: 80, // Default
+                logoBottom: 2, // Default
+                gradHeight: 20, // Default
+                gradOpacity: 0.6, // Default
+                fontSize: 1.0 // New Default
+            }
         };
 
         let state = {
@@ -426,7 +440,7 @@
             sourceImages: [], 
             items: { landscape: [], portrait: [] },
             faceApiReady: false,
-            aiEngine: 'smartcrop' // Default to smartcrop for speed
+            aiEngine: 'smartcrop' // 'face-api' or 'smartcrop'
         };
 
         // --- Initialize Face-API ---
@@ -525,6 +539,9 @@
             els.dlBtn.innerHTML = `<span>⬇</span> 下載${modeName} (選取項目)`;
             updateUI();
         }
+        
+        // Initialize inputs for default mode (landscape) on load
+        updateSidebarInputs();
 
         els.copyright.addEventListener('input', (e) => {
             globalSettings.common.copyrightText = e.target.value;
@@ -873,6 +890,7 @@
                 filters.appendChild(createFilterSlider('飽和', 'saturation', '🍭'));
                 controls.appendChild(filters);
 
+                // Info
                 const info = document.createElement('div');
                 info.className = 'card-info';
                 info.innerText = source.file.name;
