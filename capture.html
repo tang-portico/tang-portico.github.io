@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>影片截圖產生器 (Video Thumbnail Generator)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 現代化捲軸 */
+        .custom-scroll::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scroll::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: #4b5563;
+            border-radius: 99px;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb:hover {
+            background: #6b7280;
+        }
+        
+        body { font-family: system-ui, -apple-system, sans-serif; }
+        
+        /* 確保 Grid 不會因為寬度不足而崩潰 */
+        .gallery-grid-layout {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 1rem;
+            align-content: start; /* 確保內容從上方開始排列 */
+        }
+
+        /* Footer 按鈕樣式 */
+        .btn-outline {
+            background-color: transparent;
+            border: 1px solid #4b5563;
+            color: #9ca3af;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .btn-outline:hover {
+            border-color: #60a5fa;
+            color: #60a5fa;
+        }
+        .footer {
+            text-align: center;
+            font-size: 12px;
+            color: #6b7280;
+            padding: 10px;
+        }
+    </style>
+</head>
+<body class="bg-gray-950 text-gray-100 h-screen w-screen overflow-hidden flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-gray-900 border-b border-gray-800 p-4 flex-none z-20 shadow-lg h-16 flex items-center">
+        <div class="container mx-auto flex justify-between items-center px-2">
+            <h1 class="text-xl font-bold flex items-center gap-2 text-blue-400">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                影片截圖工具
+            </h1>
+            <div>
+                <label for="videoInput" class="cursor-pointer bg-blue-600 hover:bg-blue-500 text-white px-5 py-1.5 rounded-full transition flex items-center gap-2 shadow-lg hover:shadow-blue-500/30 text-sm font-medium">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                    <span>選擇影片</span>
+                </label>
+                <input type="file" id="videoInput" accept="video/*" class="hidden">
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content: 改用 flex-1 和 min-h-0 自動填滿剩餘空間 (不寫死高度) -->
+    <main class="flex-1 w-full max-w-[1920px] mx-auto p-4 lg:p-6 flex flex-col lg:flex-row gap-6 min-h-0 overflow-hidden">
+        
+        <!-- Left Panel: Video & Controls -->
+        <div class="lg:w-7/12 w-full h-full flex flex-col gap-4 overflow-hidden">
+            
+            <!-- Video Container -->
+            <div class="flex-1 min-h-0 bg-black rounded-xl overflow-hidden shadow-2xl border border-gray-800 relative group ring-1 ring-white/10 flex flex-col justify-center">
+                <video id="mainVideo" class="w-full h-full object-contain" controls></video>
+                
+                <!-- Overlay -->
+                <div id="dropMessage" class="absolute inset-0 flex flex-col items-center justify-center text-gray-500 pointer-events-none bg-gray-900/90 backdrop-blur-sm transition-opacity z-10">
+                    <div class="bg-gray-800 p-6 rounded-2xl border border-gray-700 shadow-xl text-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mb-4 opacity-50 text-blue-400 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                        </svg>
+                        <p class="text-lg font-medium text-gray-200">拖曳影片至此</p>
+                        <p class="text-sm text-gray-500 mt-2">支援 MP4, MOV, WebM</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Controls Panel -->
+            <div class="flex-none bg-gray-800 rounded-xl border border-gray-700 p-5 shadow-lg">
+                <div class="flex justify-between items-center mb-4 border-b border-gray-700/50 pb-2">
+                    <h2 class="text-sm font-bold text-gray-300 uppercase tracking-wider flex items-center gap-2">
+                        <span class="w-2 h-2 bg-blue-500 rounded-full"></span> 截圖控制器
+                    </h2>
+                    <span id="videoDuration" class="font-mono text-xs text-blue-300 bg-blue-900/30 px-2 py-0.5 rounded border border-blue-800/50">00:00:00</span>
+                </div>
+
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                    <div class="lg:col-span-1">
+                        <label class="text-[10px] font-semibold text-gray-500 uppercase block mb-1">開始時間</label>
+                        <div class="flex">
+                            <input type="text" id="startTime" value="00:00:00" class="w-full bg-gray-900 border border-gray-600 rounded-l px-2 py-1.5 text-center font-mono text-sm text-white focus:outline-none focus:border-blue-500">
+                            <button onclick="setCurrentTime('start')" class="bg-gray-700 hover:bg-gray-600 px-2 rounded-r border-y border-r border-gray-600" title="設為當前">📍</button>
+                        </div>
+                    </div>
+                    <div class="lg:col-span-1">
+                        <label class="text-[10px] font-semibold text-gray-500 uppercase block mb-1">結束時間</label>
+                        <div class="flex">
+                            <input type="text" id="endTime" value="00:00:10" class="w-full bg-gray-900 border border-gray-600 rounded-l px-2 py-1.5 text-center font-mono text-sm text-white focus:outline-none focus:border-blue-500">
+                            <button onclick="setCurrentTime('end')" class="bg-gray-700 hover:bg-gray-600 px-2 rounded-r border-y border-r border-gray-600" title="設為當前">📍</button>
+                        </div>
+                    </div>
+                    <div class="lg:col-span-2">
+                        <label class="text-[10px] font-semibold text-gray-500 uppercase block mb-1">
+                            間隔: <span id="intervalDisplay" class="text-blue-400">5.0</span> 秒
+                        </label>
+                        <input type="range" id="intervalRange" min="0.5" max="60" step="0.5" value="5" class="w-full h-1.5 bg-gray-900 rounded-lg appearance-none cursor-pointer accent-blue-500 mt-2">
+                        <input type="number" id="intervalTime" value="5" class="hidden">
+                    </div>
+                </div>
+
+                <div class="flex gap-3">
+                    <button id="btnManualCapture" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white py-2 rounded-lg font-medium text-sm transition shadow-lg shadow-indigo-900/20 flex justify-center items-center gap-2">
+                        單張截圖
+                    </button>
+                    <button id="btnAutoCapture" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-2 rounded-lg font-medium text-sm transition shadow-lg shadow-emerald-900/20 flex justify-center items-center gap-2">
+                        執行區間截圖
+                    </button>
+                </div>
+                
+                <p id="statusText" class="text-xs text-center text-yellow-400 mt-2 hidden animate-pulse">
+                    ⚡ 正在處理中...
+                </p>
+            </div>
+        </div>
+
+        <!-- Right Panel: Gallery -->
+        <div class="lg:w-5/12 w-full h-full flex flex-col bg-gray-800 rounded-xl border border-gray-700 shadow-2xl overflow-hidden">
+            <!-- Header -->
+            <div class="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-800 flex-none z-10">
+                <div class="flex items-center gap-2">
+                    <span class="font-bold text-gray-200">截圖畫廊</span>
+                    <span class="text-xs font-mono bg-gray-700 text-gray-300 px-2 py-0.5 rounded-full" id="countDisplay">0</span>
+                </div>
+                <button onclick="clearGallery()" class="text-xs text-red-400 hover:text-red-300 px-3 py-1 rounded hover:bg-red-400/10 transition">
+                    清空
+                </button>
+            </div>
+            
+            <!-- Gallery List -->
+            <div id="galleryContainer" class="flex-1 min-h-0 overflow-y-auto custom-scroll p-[15px] bg-gray-900/30">
+                <div id="gallery" class="gallery-grid-layout w-full">
+                    <!-- Empty State -->
+                    <div id="emptyState" class="col-span-full flex flex-col items-center justify-center text-gray-600 h-64 border-2 border-dashed border-gray-800 rounded-xl">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mb-2 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <p class="text-sm">尚未有截圖</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 border-t border-gray-800 p-2 flex-none z-20">
+        <div class="footer flex flex-col items-center justify-center gap-1">
+            <img src="https://img.gagaoolala.com/assets/v2.1.1/img/ui/logo.png" alt="GagaOOLala Logo" width="120" height="26" class="opacity-80">
+            <div>GagaOOLala 設計部開發</div>
+        </div>
+    </footer>
+
+    <!-- Hidden Canvas -->
+    <canvas id="canvas" class="hidden"></canvas>
+
+    <script>
+        const videoInput = document.getElementById('videoInput');
+        const video = document.getElementById('mainVideo');
+        const canvas = document.getElementById('canvas');
+        const gallery = document.getElementById('gallery');
+        const countDisplay = document.getElementById('countDisplay');
+        const emptyState = document.getElementById('emptyState');
+        const statusText = document.getElementById('statusText');
+        const dropMessage = document.getElementById('dropMessage');
+        const intervalRange = document.getElementById('intervalRange');
+        const intervalInput = document.getElementById('intervalTime');
+        const intervalDisplay = document.getElementById('intervalDisplay');
+        const ctx = canvas.getContext('2d');
+
+        let isAutoCapturing = false;
+        let captureCount = 0;
+
+        // --- Helper Functions ---
+        function secondsToHHMMSS(sec) {
+            sec = Number(sec);
+            const h = Math.floor(sec / 3600);
+            const m = Math.floor(sec % 3600 / 60);
+            const s = Math.floor(sec % 3600 % 60);
+            return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        }
+
+        function parseHHMMSStoSeconds(str) {
+            if (!str) return 0;
+            const parts = str.split(':').map(part => parseFloat(part));
+            let seconds = 0;
+            if (parts.length === 3) seconds = parts[0] * 3600 + parts[1] * 60 + parts[2];
+            else if (parts.length === 2) seconds = parts[0] * 60 + parts[1];
+            else if (parts.length === 1) seconds = parts[0];
+            return isNaN(seconds) ? 0 : seconds;
+        }
+
+        function formatFilenameTime(seconds) {
+            return new Date(seconds * 1000).toISOString().substr(11, 8).replace(/:/g, '-');
+        }
+
+        // --- Event Listeners ---
+        intervalRange.addEventListener('input', (e) => {
+            intervalDisplay.innerText = parseFloat(e.target.value).toFixed(1);
+            intervalInput.value = e.target.value;
+        });
+
+        ['startTime', 'endTime'].forEach(id => {
+            const el = document.getElementById(id);
+            el.addEventListener('blur', () => {
+                const secs = parseHHMMSStoSeconds(el.value);
+                el.value = secondsToHHMMSS(secs);
+            });
+            el.addEventListener('keydown', (e) => {
+                if(e.key === 'Enter') el.blur();
+            });
+        });
+
+        videoInput.addEventListener('change', (e) => loadVideo(e.target.files[0]));
+        document.body.addEventListener('dragover', (e) => e.preventDefault());
+        document.body.addEventListener('drop', (e) => {
+            e.preventDefault();
+            if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                const file = e.dataTransfer.files[0];
+                if (file.type.startsWith('video/')) loadVideo(file);
+            }
+        });
+
+        function loadVideo(file) {
+            if (!file) return;
+            const url = URL.createObjectURL(file);
+            video.src = url;
+            video.onloadedmetadata = () => {
+                const durationHHMMSS = secondsToHHMMSS(video.duration);
+                document.getElementById('videoDuration').innerText = durationHHMMSS;
+                document.getElementById('endTime').value = durationHHMMSS;
+                dropMessage.classList.add('hidden');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+            };
+        }
+
+        function setCurrentTime(type) {
+            if (!video.duration) return;
+            const timeStr = secondsToHHMMSS(video.currentTime);
+            document.getElementById(type === 'start' ? 'startTime' : 'endTime').value = timeStr;
+        }
+
+        // --- Capture ---
+        function captureFrame(isAuto = false) {
+            if (!video.videoWidth) return;
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+            const timestamp = video.currentTime;
+            addToGallery(dataUrl, timestamp);
+        }
+
+        function addToGallery(dataUrl, timestamp) {
+            if (captureCount === 0) emptyState.classList.add('hidden');
+            captureCount++;
+            countDisplay.innerText = captureCount;
+
+            const timeStr = secondsToHHMMSS(timestamp);
+            const fileName = `Capture_${formatFilenameTime(timestamp)}.jpg`;
+
+            const div = document.createElement('div');
+            // w-full 確保在 Grid Cell 內填滿
+            div.className = "w-full bg-gray-700 rounded-lg overflow-hidden border border-gray-600 shadow-md flex flex-col animate-fadeIn";
+            
+            // 強制 16:9 + Object Cover 確保不變形
+            div.innerHTML = `
+                <div class="relative w-full aspect-video bg-black group cursor-pointer overflow-hidden" onclick="viewImage('${dataUrl}')">
+                    <img src="${dataUrl}" class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105">
+                    <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                        <span class="bg-black/50 text-white px-3 py-1 rounded-full text-xs backdrop-blur-sm">放大檢視</span>
+                    </div>
+                    <div class="absolute bottom-2 right-2 bg-black/70 text-white text-[10px] px-2 py-0.5 rounded font-mono border border-white/10">
+                        ${timeStr}
+                    </div>
+                </div>
+                <div class="p-3 bg-gray-800 flex justify-between items-center border-t border-gray-700">
+                    <span class="text-xs text-gray-400 font-mono truncate mr-2 select-all">${fileName}</span>
+                    <a href="${dataUrl}" download="${fileName}" class="text-blue-400 hover:text-white hover:bg-blue-600 p-1.5 rounded transition" title="下載">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                    </a>
+                </div>
+            `;
+            
+            // 新增在最前
+            gallery.insertBefore(div, gallery.firstChild);
+        }
+
+        function viewImage(url) {
+            const win = window.open();
+            win.document.write(`<body style="margin:0;background:#0f0f12;display:flex;justify-content:center;align-items:center;height:100vh;overflow:hidden;"><img src="${url}" style="max-width:95%;max-height:95%;box-shadow:0 0 50px rgba(0,0,0,0.8);border-radius:8px;border:1px solid #333;"></body>`);
+        }
+
+        function clearGallery() {
+            if(captureCount === 0) return;
+            if(!confirm('確定清空？')) return;
+            const items = gallery.querySelectorAll('div.bg-gray-700'); 
+            items.forEach(item => item.remove());
+            captureCount = 0;
+            countDisplay.innerText = 0;
+            emptyState.classList.remove('hidden');
+        }
+
+        // --- Logic ---
+        document.getElementById('btnManualCapture').addEventListener('click', () => {
+            if (!video.src) { alert('請先載入影片！'); return; }
+            captureFrame();
+        });
+
+        const seekTo = (time) => new Promise(resolve => {
+            const onSeeked = () => { video.removeEventListener('seeked', onSeeked); setTimeout(resolve, 150); };
+            video.addEventListener('seeked', onSeeked);
+            video.currentTime = time;
+        });
+
+        document.getElementById('btnAutoCapture').addEventListener('click', async () => {
+            if (!video.src) { alert('請先載入影片！'); return; }
+            if (isAutoCapturing) return;
+
+            const start = parseHHMMSStoSeconds(document.getElementById('startTime').value);
+            const end = parseHHMMSStoSeconds(document.getElementById('endTime').value);
+            const interval = parseFloat(intervalInput.value);
+
+            if (start >= end) { alert('時間設定錯誤'); return; }
+            if (interval <= 0) { alert('間隔必須大於 0'); return; }
+
+            isAutoCapturing = true;
+            const btn = document.getElementById('btnAutoCapture');
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = `停止`;
+            btn.classList.replace('bg-emerald-600', 'bg-red-600');
+            statusText.classList.remove('hidden');
+            video.pause();
+
+            try {
+                for (let t = start; t <= end; t += interval) {
+                    await seekTo(t);
+                    captureFrame(true);
+                    // 保持捲軸在最上方
+                    document.getElementById('galleryContainer').scrollTop = 0;
+                }
+            } catch (err) { console.error(err); } 
+            finally {
+                isAutoCapturing = false;
+                btn.innerHTML = originalHTML;
+                btn.classList.replace('bg-red-600', 'bg-emerald-600');
+                statusText.classList.add('hidden');
+            }
+        });
+
+        // CSS Animation
+        const style = document.createElement('style');
+        style.innerHTML = `@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } } .animate-fadeIn { animation: fadeIn 0.3s ease-out forwards; }`;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
