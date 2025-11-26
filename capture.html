@@ -6,11 +6,10 @@
     <title>影片截圖產生器 - GagaOOLala</title>
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- 改用指定的 face-api.js 版本 -->
+    <!-- 引入 face-api.js -->
     <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
 
     <style>
-        /* 現代化捲軸 */
         .custom-scroll::-webkit-scrollbar {
             width: 6px;
             height: 6px;
@@ -35,7 +34,6 @@
             align-content: start;
         }
 
-        /* Footer 按鈕樣式 */
         .btn-outline {
             background-color: transparent;
             border: 1px solid #4b5563;
@@ -68,7 +66,6 @@
             filter: grayscale(0%);
         }
 
-        /* 提示訊息動畫 */
         @keyframes slideDown {
             from { transform: translate(-50%, -100%); opacity: 0; }
             to { transform: translate(-50%, 20px); opacity: 1; }
@@ -76,11 +73,14 @@
         .toast-notification {
             animation: slideDown 0.3s ease-out forwards;
         }
+        .ai-badge { 
+            background: linear-gradient(45deg, #00d2ff, #d84bf7); 
+            color: black; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 10px; margin-left: 5px;
+        }
     </style>
 </head>
 <body class="bg-gray-950 text-gray-100 h-screen w-screen overflow-hidden flex flex-col relative">
 
-    <!-- Toast Notification Container -->
     <div id="toastContainer" class="fixed top-0 left-1/2 z-50 pointer-events-none"></div>
 
     <!-- Header -->
@@ -91,7 +91,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
-                影片截圖工具
+                影片截圖工具 <span class="ai-badge">AI</span>
             </h1>
             <div>
                 <label for="videoInput" class="cursor-pointer bg-blue-600 hover:bg-blue-500 text-white px-5 py-1.5 rounded-full transition flex items-center gap-2 shadow-lg hover:shadow-blue-500/30 text-sm font-medium">
@@ -114,8 +114,6 @@
             <!-- Video Container -->
             <div class="flex-1 min-h-0 bg-black rounded-xl overflow-hidden shadow-2xl border border-gray-800 relative group ring-1 ring-white/10 flex flex-col justify-center">
                 <video id="mainVideo" class="w-full h-full object-contain" controls crossorigin="anonymous"></video>
-                
-                <!-- Overlay -->
                 <div id="dropMessage" class="absolute inset-0 flex flex-col items-center justify-center text-gray-500 pointer-events-none bg-gray-900/90 backdrop-blur-sm transition-opacity z-10">
                     <div class="bg-gray-800 p-6 rounded-2xl border border-gray-700 shadow-xl text-center">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mb-4 opacity-50 text-blue-400 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -160,17 +158,25 @@
                     </div>
                 </div>
 
-                <!-- AI Toggle -->
-                <div class="mb-4 bg-gray-900/50 p-3 rounded-lg border border-gray-700/50 flex items-center justify-between">
-                    <div class="flex items-center gap-2">
-                        <input type="checkbox" id="aiToggle" class="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-600 focus:ring-2">
-                        <label for="aiToggle" class="text-xs font-medium text-gray-300 cursor-pointer select-none flex items-center gap-1">
-                            <span>🤖</span> AI 人臉標記 (Face-API)
-                        </label>
+                <!-- AI Control Section -->
+                <div class="mb-4 bg-gray-900/50 p-3 rounded-lg border border-gray-700/50 flex flex-col gap-2">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <input type="checkbox" id="aiToggle" class="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-600 focus:ring-2">
+                            <label for="aiToggle" class="text-xs font-medium text-gray-300 cursor-pointer select-none flex items-center gap-1">
+                                <span>🤖</span> 啟用 AI 人臉過濾
+                            </label>
+                        </div>
+                        <span id="modelStatus" class="text-[10px] text-gray-500">等待啟用</span>
                     </div>
-                    <div class="flex flex-col items-end">
-                        <span id="modelStatus" class="text-[10px] text-gray-500">模型未載入</span>
-                        <span class="text-[10px] text-gray-600">不漏圖，無人臉變暗</span>
+                    
+                    <!-- Model Selection -->
+                    <div class="flex items-center gap-2 mt-1 pl-6">
+                        <span class="text-[10px] text-gray-400">模式:</span>
+                        <select id="modelSelect" class="bg-gray-800 text-white text-xs border border-gray-600 rounded px-2 py-1 focus:outline-none focus:border-blue-500">
+                            <option value="ssd">高精準模式 (SSD MobileNet)</option>
+                            <option value="tiny">極速模式 (Tiny Face)</option>
+                        </select>
                     </div>
                 </div>
 
@@ -187,22 +193,17 @@
 
         <!-- Right Panel: Gallery -->
         <div class="lg:w-5/12 w-full h-full flex flex-col bg-gray-800 rounded-xl border border-gray-700 shadow-2xl overflow-hidden">
-            <!-- Header -->
             <div class="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-800 flex-none z-10">
                 <div class="flex items-center gap-2">
                     <span class="font-bold text-gray-200">截圖畫廊</span>
                     <span class="text-xs font-mono bg-gray-700 text-gray-300 px-2 py-0.5 rounded-full" id="countDisplay">0</span>
                 </div>
-                <!-- Clear Button with ID -->
                 <button id="btnClear" onclick="clearGallery()" class="text-xs text-red-400 hover:text-red-300 px-3 py-1 rounded hover:bg-red-400/10 transition border border-transparent">
                     清空
                 </button>
             </div>
-            
-            <!-- Gallery List -->
             <div id="galleryContainer" class="flex-1 min-h-0 overflow-y-auto custom-scroll p-[15px] bg-gray-900/30">
                 <div id="gallery" class="gallery-grid-layout w-full">
-                    <!-- Empty State -->
                     <div id="emptyState" class="col-span-full flex flex-col items-center justify-center text-gray-600 h-64 border-2 border-dashed border-gray-800 rounded-xl">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mb-2 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -222,7 +223,6 @@
         </div>
     </footer>
 
-    <!-- Hidden Canvas -->
     <canvas id="canvas" class="hidden"></canvas>
 
     <script>
@@ -237,26 +237,26 @@
         const intervalInput = document.getElementById('intervalTime');
         const intervalDisplay = document.getElementById('intervalDisplay');
         const aiToggle = document.getElementById('aiToggle');
+        const modelSelect = document.getElementById('modelSelect');
         const modelStatus = document.getElementById('modelStatus');
         const ctx = canvas.getContext('2d');
 
         let isAutoCapturing = false;
         let captureCount = 0;
-        let aiModelLoaded = false;
+        
+        // 追蹤模型載入狀態
+        let loadedModels = {
+            ssd: false,
+            tiny: false
+        };
 
-        // --- Toast Notification System ---
+        // Toast System
         function showMessage(msg, type = 'info') {
             const container = document.getElementById('toastContainer');
             const div = document.createElement('div');
-            
-            let bgClass = 'bg-blue-600';
-            if (type === 'error') bgClass = 'bg-red-600';
-            if (type === 'success') bgClass = 'bg-green-600';
-            if (type === 'warning') bgClass = 'bg-yellow-600';
-
+            let bgClass = type === 'error' ? 'bg-red-600' : type === 'success' ? 'bg-green-600' : type === 'warning' ? 'bg-yellow-600' : 'bg-blue-600';
             div.className = `toast-notification ${bgClass} text-white px-4 py-2 rounded-lg shadow-lg mb-2 flex items-center gap-2 text-sm font-medium`;
             div.innerHTML = `<span>${msg}</span>`;
-            
             container.appendChild(div);
             setTimeout(() => {
                 div.style.opacity = '0';
@@ -265,7 +265,7 @@
             }, 3000);
         }
 
-        // --- Helper Functions ---
+        // Time Helpers
         function secondsToHHMMSS(sec) {
             sec = Number(sec);
             const h = Math.floor(sec / 3600);
@@ -288,7 +288,7 @@
             return new Date(seconds * 1000).toISOString().substr(11, 8).replace(/:/g, '-');
         }
 
-        // --- Event Listeners ---
+        // Event Listeners
         intervalRange.addEventListener('input', (e) => {
             intervalDisplay.innerText = parseFloat(e.target.value).toFixed(1);
             intervalInput.value = e.target.value;
@@ -336,34 +336,51 @@
             document.getElementById(type === 'start' ? 'startTime' : 'endTime').value = timeStr;
         }
 
-        // --- AI Model Loader (Face-API) ---
-        async function loadAiModel() {
-            if (aiModelLoaded) return true;
+        // --- AI Model Loader ---
+        async function loadSelectedModel() {
+            const type = modelSelect.value; // 'ssd' or 'tiny'
             
-            modelStatus.innerText = "載入中...";
+            if (loadedModels[type]) return true;
+
+            modelStatus.innerText = `載入 ${type === 'ssd' ? 'SSD' : 'Tiny'}...`;
             modelStatus.className = "text-[10px] text-yellow-500 animate-pulse";
             
             try {
                 const modelPath = 'https://justadudewhohacks.github.io/face-api.js/models';
-                await faceapi.nets.tinyFaceDetector.loadFromUri(modelPath);
                 
-                aiModelLoaded = true;
-                modelStatus.innerText = "人臉模型就緒";
+                if (type === 'ssd') {
+                    await faceapi.nets.ssdMobilenetv1.loadFromUri(modelPath);
+                } else {
+                    await faceapi.nets.tinyFaceDetector.loadFromUri(modelPath);
+                }
+                
+                loadedModels[type] = true;
+                modelStatus.innerText = `${type === 'ssd' ? 'SSD' : 'Tiny'} 就緒`;
                 modelStatus.className = "text-[10px] text-green-500 font-bold";
                 return true;
             } catch (error) {
                 console.error("模型載入失敗:", error);
                 modelStatus.innerText = "載入失敗";
                 modelStatus.className = "text-[10px] text-red-500";
-                showMessage("AI 模型載入失敗，請檢查網路連線。", 'error');
+                showMessage("AI 模型載入失敗，請檢查網路。", 'error');
                 aiToggle.checked = false;
                 return false;
             }
         }
 
+        // Handle Toggle and Select Change
         aiToggle.addEventListener('change', async (e) => {
-            if (e.target.checked && !aiModelLoaded) {
-                await loadAiModel();
+            if (e.target.checked) {
+                await loadSelectedModel();
+            } else {
+                modelStatus.innerText = "已停用";
+                modelStatus.className = "text-[10px] text-gray-500";
+            }
+        });
+
+        modelSelect.addEventListener('change', async () => {
+            if (aiToggle.checked) {
+                await loadSelectedModel();
             }
         });
 
@@ -379,13 +396,15 @@
             gallery.insertBefore(galleryItem, gallery.firstChild);
             
             if (isAuto && aiToggle.checked) {
-                if (!aiModelLoaded) await loadAiModel();
+                // Ensure current model is loaded
+                const type = modelSelect.value;
+                if (!loadedModels[type]) await loadSelectedModel();
                 
-                if (aiModelLoaded) {
+                if (loadedModels[type]) {
                     const statusBadge = galleryItem.querySelector('.ai-status');
                     statusBadge.innerHTML = `<span class="animate-spin inline-block">⏳</span>`;
                     
-                    detectFaceInItem(galleryItem, canvas).then(hasFace => {
+                    detectFaceInItem(canvas, type).then(hasFace => {
                         if (hasFace) {
                             statusBadge.innerHTML = `👤`;
                             statusBadge.className = "ai-status absolute top-2 right-2 bg-green-500/90 text-white text-[10px] px-2 py-0.5 rounded-full font-bold shadow-lg z-10";
@@ -407,8 +426,15 @@
             }
         }
 
-        async function detectFaceInItem(element, canvasSource) {
-            const detections = await faceapi.detectAllFaces(canvasSource, new faceapi.TinyFaceDetectorOptions());
+        async function detectFaceInItem(canvasSource, type) {
+            let detections = [];
+            if (type === 'ssd') {
+                // SSD MobileNet V1 Options
+                detections = await faceapi.detectAllFaces(canvasSource, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 }));
+            } else {
+                // Tiny Face Detector Options
+                detections = await faceapi.detectAllFaces(canvasSource, new faceapi.TinyFaceDetectorOptions({ scoreThreshold: 0.5 }));
+            }
             return detections.length > 0;
         }
 
@@ -421,7 +447,6 @@
             const fileName = `Capture_${formatFilenameTime(timestamp)}.jpg`;
 
             const div = document.createElement('div');
-            // 加入 gallery-item class 方便選取
             div.className = "gallery-item w-full bg-gray-700 rounded-lg overflow-hidden border border-gray-600 shadow-md flex flex-col animate-fadeIn transition-all duration-300";
             
             div.innerHTML = `
@@ -457,36 +482,31 @@
             win.document.write(`<body style="margin:0;background:#0f0f12;display:flex;justify-content:center;align-items:center;height:100vh;overflow:hidden;"><img src="${url}" style="max-width:95%;max-height:95%;box-shadow:0 0 50px rgba(0,0,0,0.8);border-radius:8px;border:1px solid #333;"></body>`);
         }
 
-        // --- FIXED: Clear Gallery Logic with Button Toggle (No Alert/Confirm) ---
         let clearTimer;
         function clearGallery() {
             if (captureCount === 0) return;
             
             const btn = document.getElementById('btnClear');
             
-            // 第一次點擊：切換為確認狀態
             if (btn.getAttribute('data-confirm') !== 'true') {
                 btn.innerText = '確定刪除？';
                 btn.setAttribute('data-confirm', 'true');
                 btn.classList.add('bg-red-600', 'text-white');
                 btn.classList.remove('text-red-400', 'hover:bg-red-400/10');
                 
-                // 3秒後自動恢復
                 clearTimer = setTimeout(() => {
                     resetClearButton(btn);
                 }, 3000);
                 return;
             }
             
-            // 第二次點擊：執行刪除
-            const items = gallery.querySelectorAll('.gallery-item'); // 使用 class 選取
+            const items = gallery.querySelectorAll('.gallery-item');
             items.forEach(item => item.remove());
             captureCount = 0;
             countDisplay.innerText = 0;
             emptyState.classList.remove('hidden');
             showMessage('畫廊已清空', 'success');
             
-            // 重置按鈕
             resetClearButton(btn);
             if (clearTimer) clearTimeout(clearTimer);
         }
@@ -498,7 +518,6 @@
             btn.classList.add('text-red-400', 'hover:bg-red-400/10');
         }
 
-        // --- Logic ---
         document.getElementById('btnManualCapture').addEventListener('click', () => {
             if (!video.src) { showMessage('請先載入影片！', 'warning'); return; }
             captureFrame(); 
@@ -518,11 +537,11 @@
             const end = parseHHMMSStoSeconds(document.getElementById('endTime').value);
             const interval = parseFloat(intervalInput.value);
 
-            if (start >= end) { showMessage('開始時間必須小於結束時間', 'error'); return; }
-            if (interval <= 0) { showMessage('間隔必須大於 0', 'error'); return; }
+            if (start >= end) { showMessage('時間設定錯誤', 'error'); return; }
+            if (interval <= 0) { showMessage('間隔錯誤', 'error'); return; }
             
-            if (aiToggle.checked && !aiModelLoaded) {
-                const loaded = await loadAiModel();
+            if (aiToggle.checked) {
+                const loaded = await loadSelectedModel();
                 if (!loaded) return; 
             }
 
