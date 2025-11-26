@@ -3,8 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>影片截圖產生器 (Video Thumbnail Generator)</title>
+    <title>影片截圖產生器 - GagaOOLala</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- 改用指定的 face-api.js 版本 -->
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+
     <style>
         /* 現代化捲軸 */
         .custom-scroll::-webkit-scrollbar {
@@ -24,12 +28,11 @@
         
         body { font-family: system-ui, -apple-system, sans-serif; }
         
-        /* 確保 Grid 不會因為寬度不足而崩潰 */
         .gallery-grid-layout {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
             gap: 1rem;
-            align-content: start; /* 確保內容從上方開始排列 */
+            align-content: start;
         }
 
         /* Footer 按鈕樣式 */
@@ -53,9 +56,32 @@
             color: #6b7280;
             padding: 10px;
         }
+        
+        /* 無人臉時的樣式：變暗 + 灰階，滑鼠懸停時恢復 */
+        .no-face-dimmed {
+            opacity: 0.3;
+            filter: grayscale(100%);
+            transition: all 0.3s ease;
+        }
+        .no-face-dimmed:hover {
+            opacity: 1;
+            filter: grayscale(0%);
+        }
+
+        /* 提示訊息動畫 */
+        @keyframes slideDown {
+            from { transform: translate(-50%, -100%); opacity: 0; }
+            to { transform: translate(-50%, 20px); opacity: 1; }
+        }
+        .toast-notification {
+            animation: slideDown 0.3s ease-out forwards;
+        }
     </style>
 </head>
-<body class="bg-gray-950 text-gray-100 h-screen w-screen overflow-hidden flex flex-col">
+<body class="bg-gray-950 text-gray-100 h-screen w-screen overflow-hidden flex flex-col relative">
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="fixed top-0 left-1/2 z-50 pointer-events-none"></div>
 
     <!-- Header -->
     <header class="bg-gray-900 border-b border-gray-800 p-4 flex-none z-20 shadow-lg h-16 flex items-center">
@@ -79,7 +105,7 @@
         </div>
     </header>
 
-    <!-- Main Content: 改用 flex-1 和 min-h-0 自動填滿剩餘空間 (不寫死高度) -->
+    <!-- Main Content -->
     <main class="flex-1 w-full max-w-[1920px] mx-auto p-4 lg:p-6 flex flex-col lg:flex-row gap-6 min-h-0 overflow-hidden">
         
         <!-- Left Panel: Video & Controls -->
@@ -87,7 +113,7 @@
             
             <!-- Video Container -->
             <div class="flex-1 min-h-0 bg-black rounded-xl overflow-hidden shadow-2xl border border-gray-800 relative group ring-1 ring-white/10 flex flex-col justify-center">
-                <video id="mainVideo" class="w-full h-full object-contain" controls></video>
+                <video id="mainVideo" class="w-full h-full object-contain" controls crossorigin="anonymous"></video>
                 
                 <!-- Overlay -->
                 <div id="dropMessage" class="absolute inset-0 flex flex-col items-center justify-center text-gray-500 pointer-events-none bg-gray-900/90 backdrop-blur-sm transition-opacity z-10">
@@ -134,6 +160,20 @@
                     </div>
                 </div>
 
+                <!-- AI Toggle -->
+                <div class="mb-4 bg-gray-900/50 p-3 rounded-lg border border-gray-700/50 flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" id="aiToggle" class="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-600 focus:ring-2">
+                        <label for="aiToggle" class="text-xs font-medium text-gray-300 cursor-pointer select-none flex items-center gap-1">
+                            <span>🤖</span> AI 人臉標記 (Face-API)
+                        </label>
+                    </div>
+                    <div class="flex flex-col items-end">
+                        <span id="modelStatus" class="text-[10px] text-gray-500">模型未載入</span>
+                        <span class="text-[10px] text-gray-600">不漏圖，無人臉變暗</span>
+                    </div>
+                </div>
+
                 <div class="flex gap-3">
                     <button id="btnManualCapture" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white py-2 rounded-lg font-medium text-sm transition shadow-lg shadow-indigo-900/20 flex justify-center items-center gap-2">
                         單張截圖
@@ -142,10 +182,6 @@
                         執行區間截圖
                     </button>
                 </div>
-                
-                <p id="statusText" class="text-xs text-center text-yellow-400 mt-2 hidden animate-pulse">
-                    ⚡ 正在處理中...
-                </p>
             </div>
         </div>
 
@@ -157,7 +193,8 @@
                     <span class="font-bold text-gray-200">截圖畫廊</span>
                     <span class="text-xs font-mono bg-gray-700 text-gray-300 px-2 py-0.5 rounded-full" id="countDisplay">0</span>
                 </div>
-                <button onclick="clearGallery()" class="text-xs text-red-400 hover:text-red-300 px-3 py-1 rounded hover:bg-red-400/10 transition">
+                <!-- Clear Button with ID -->
+                <button id="btnClear" onclick="clearGallery()" class="text-xs text-red-400 hover:text-red-300 px-3 py-1 rounded hover:bg-red-400/10 transition border border-transparent">
                     清空
                 </button>
             </div>
@@ -195,15 +232,38 @@
         const gallery = document.getElementById('gallery');
         const countDisplay = document.getElementById('countDisplay');
         const emptyState = document.getElementById('emptyState');
-        const statusText = document.getElementById('statusText');
         const dropMessage = document.getElementById('dropMessage');
         const intervalRange = document.getElementById('intervalRange');
         const intervalInput = document.getElementById('intervalTime');
         const intervalDisplay = document.getElementById('intervalDisplay');
+        const aiToggle = document.getElementById('aiToggle');
+        const modelStatus = document.getElementById('modelStatus');
         const ctx = canvas.getContext('2d');
 
         let isAutoCapturing = false;
         let captureCount = 0;
+        let aiModelLoaded = false;
+
+        // --- Toast Notification System ---
+        function showMessage(msg, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const div = document.createElement('div');
+            
+            let bgClass = 'bg-blue-600';
+            if (type === 'error') bgClass = 'bg-red-600';
+            if (type === 'success') bgClass = 'bg-green-600';
+            if (type === 'warning') bgClass = 'bg-yellow-600';
+
+            div.className = `toast-notification ${bgClass} text-white px-4 py-2 rounded-lg shadow-lg mb-2 flex items-center gap-2 text-sm font-medium`;
+            div.innerHTML = `<span>${msg}</span>`;
+            
+            container.appendChild(div);
+            setTimeout(() => {
+                div.style.opacity = '0';
+                div.style.transform = 'translate(-50%, -20px)';
+                setTimeout(() => div.remove(), 300);
+            }, 3000);
+        }
 
         // --- Helper Functions ---
         function secondsToHHMMSS(sec) {
@@ -266,6 +326,7 @@
                 dropMessage.classList.add('hidden');
                 canvas.width = video.videoWidth;
                 canvas.height = video.videoHeight;
+                showMessage('影片載入成功', 'success');
             };
         }
 
@@ -275,16 +336,83 @@
             document.getElementById(type === 'start' ? 'startTime' : 'endTime').value = timeStr;
         }
 
-        // --- Capture ---
-        function captureFrame(isAuto = false) {
+        // --- AI Model Loader (Face-API) ---
+        async function loadAiModel() {
+            if (aiModelLoaded) return true;
+            
+            modelStatus.innerText = "載入中...";
+            modelStatus.className = "text-[10px] text-yellow-500 animate-pulse";
+            
+            try {
+                const modelPath = 'https://justadudewhohacks.github.io/face-api.js/models';
+                await faceapi.nets.tinyFaceDetector.loadFromUri(modelPath);
+                
+                aiModelLoaded = true;
+                modelStatus.innerText = "人臉模型就緒";
+                modelStatus.className = "text-[10px] text-green-500 font-bold";
+                return true;
+            } catch (error) {
+                console.error("模型載入失敗:", error);
+                modelStatus.innerText = "載入失敗";
+                modelStatus.className = "text-[10px] text-red-500";
+                showMessage("AI 模型載入失敗，請檢查網路連線。", 'error');
+                aiToggle.checked = false;
+                return false;
+            }
+        }
+
+        aiToggle.addEventListener('change', async (e) => {
+            if (e.target.checked && !aiModelLoaded) {
+                await loadAiModel();
+            }
+        });
+
+        // --- Capture & Logic ---
+        async function captureFrame(isAuto = false) {
             if (!video.videoWidth) return;
+
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
             const timestamp = video.currentTime;
-            addToGallery(dataUrl, timestamp);
+            
+            const galleryItem = createGalleryItem(dataUrl, timestamp);
+            gallery.insertBefore(galleryItem, gallery.firstChild);
+            
+            if (isAuto && aiToggle.checked) {
+                if (!aiModelLoaded) await loadAiModel();
+                
+                if (aiModelLoaded) {
+                    const statusBadge = galleryItem.querySelector('.ai-status');
+                    statusBadge.innerHTML = `<span class="animate-spin inline-block">⏳</span>`;
+                    
+                    detectFaceInItem(galleryItem, canvas).then(hasFace => {
+                        if (hasFace) {
+                            statusBadge.innerHTML = `👤`;
+                            statusBadge.className = "ai-status absolute top-2 right-2 bg-green-500/90 text-white text-[10px] px-2 py-0.5 rounded-full font-bold shadow-lg z-10";
+                            statusBadge.title = "偵測到人臉";
+                            galleryItem.classList.add('ring-2', 'ring-green-500');
+                        } else {
+                            statusBadge.innerHTML = `❌`;
+                            statusBadge.className = "ai-status absolute top-2 right-2 bg-gray-600/50 text-white text-[10px] px-2 py-0.5 rounded-full z-10 opacity-50";
+                            galleryItem.classList.add('no-face-dimmed');
+                        }
+                    }).catch(err => {
+                        console.error("AI 偵測錯誤", err);
+                        statusBadge.innerHTML = `⚠️`;
+                    });
+                }
+            } else {
+                const statusBadge = galleryItem.querySelector('.ai-status');
+                if(statusBadge) statusBadge.remove();
+            }
         }
 
-        function addToGallery(dataUrl, timestamp) {
+        async function detectFaceInItem(element, canvasSource) {
+            const detections = await faceapi.detectAllFaces(canvasSource, new faceapi.TinyFaceDetectorOptions());
+            return detections.length > 0;
+        }
+
+        function createGalleryItem(dataUrl, timestamp) {
             if (captureCount === 0) emptyState.classList.add('hidden');
             captureCount++;
             countDisplay.innerText = captureCount;
@@ -293,17 +421,17 @@
             const fileName = `Capture_${formatFilenameTime(timestamp)}.jpg`;
 
             const div = document.createElement('div');
-            // w-full 確保在 Grid Cell 內填滿
-            div.className = "w-full bg-gray-700 rounded-lg overflow-hidden border border-gray-600 shadow-md flex flex-col animate-fadeIn";
+            // 加入 gallery-item class 方便選取
+            div.className = "gallery-item w-full bg-gray-700 rounded-lg overflow-hidden border border-gray-600 shadow-md flex flex-col animate-fadeIn transition-all duration-300";
             
-            // 強制 16:9 + Object Cover 確保不變形
             div.innerHTML = `
                 <div class="relative w-full aspect-video bg-black group cursor-pointer overflow-hidden" onclick="viewImage('${dataUrl}')">
                     <img src="${dataUrl}" class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105">
-                    <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                    <div class="ai-status absolute top-2 right-2 bg-blue-500/50 text-white text-[10px] px-2 py-0.5 rounded-full backdrop-blur-sm z-10 hidden">AI</div>
+                    <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100 z-20">
                         <span class="bg-black/50 text-white px-3 py-1 rounded-full text-xs backdrop-blur-sm">放大檢視</span>
                     </div>
-                    <div class="absolute bottom-2 right-2 bg-black/70 text-white text-[10px] px-2 py-0.5 rounded font-mono border border-white/10">
+                    <div class="absolute bottom-2 right-2 bg-black/70 text-white text-[10px] px-2 py-0.5 rounded font-mono border border-white/10 z-10">
                         ${timeStr}
                     </div>
                 </div>
@@ -317,8 +445,11 @@
                 </div>
             `;
             
-            // 新增在最前
-            gallery.insertBefore(div, gallery.firstChild);
+            if(aiToggle.checked) {
+                div.querySelector('.ai-status').classList.remove('hidden');
+            }
+            
+            return div;
         }
 
         function viewImage(url) {
@@ -326,20 +457,51 @@
             win.document.write(`<body style="margin:0;background:#0f0f12;display:flex;justify-content:center;align-items:center;height:100vh;overflow:hidden;"><img src="${url}" style="max-width:95%;max-height:95%;box-shadow:0 0 50px rgba(0,0,0,0.8);border-radius:8px;border:1px solid #333;"></body>`);
         }
 
+        // --- FIXED: Clear Gallery Logic with Button Toggle (No Alert/Confirm) ---
+        let clearTimer;
         function clearGallery() {
-            if(captureCount === 0) return;
-            if(!confirm('確定清空？')) return;
-            const items = gallery.querySelectorAll('div.bg-gray-700'); 
+            if (captureCount === 0) return;
+            
+            const btn = document.getElementById('btnClear');
+            
+            // 第一次點擊：切換為確認狀態
+            if (btn.getAttribute('data-confirm') !== 'true') {
+                btn.innerText = '確定刪除？';
+                btn.setAttribute('data-confirm', 'true');
+                btn.classList.add('bg-red-600', 'text-white');
+                btn.classList.remove('text-red-400', 'hover:bg-red-400/10');
+                
+                // 3秒後自動恢復
+                clearTimer = setTimeout(() => {
+                    resetClearButton(btn);
+                }, 3000);
+                return;
+            }
+            
+            // 第二次點擊：執行刪除
+            const items = gallery.querySelectorAll('.gallery-item'); // 使用 class 選取
             items.forEach(item => item.remove());
             captureCount = 0;
             countDisplay.innerText = 0;
             emptyState.classList.remove('hidden');
+            showMessage('畫廊已清空', 'success');
+            
+            // 重置按鈕
+            resetClearButton(btn);
+            if (clearTimer) clearTimeout(clearTimer);
+        }
+
+        function resetClearButton(btn) {
+            btn.innerText = '清空';
+            btn.removeAttribute('data-confirm');
+            btn.classList.remove('bg-red-600', 'text-white');
+            btn.classList.add('text-red-400', 'hover:bg-red-400/10');
         }
 
         // --- Logic ---
         document.getElementById('btnManualCapture').addEventListener('click', () => {
-            if (!video.src) { alert('請先載入影片！'); return; }
-            captureFrame();
+            if (!video.src) { showMessage('請先載入影片！', 'warning'); return; }
+            captureFrame(); 
         });
 
         const seekTo = (time) => new Promise(resolve => {
@@ -349,29 +511,33 @@
         });
 
         document.getElementById('btnAutoCapture').addEventListener('click', async () => {
-            if (!video.src) { alert('請先載入影片！'); return; }
+            if (!video.src) { showMessage('請先載入影片！', 'warning'); return; }
             if (isAutoCapturing) return;
 
             const start = parseHHMMSStoSeconds(document.getElementById('startTime').value);
             const end = parseHHMMSStoSeconds(document.getElementById('endTime').value);
             const interval = parseFloat(intervalInput.value);
 
-            if (start >= end) { alert('時間設定錯誤'); return; }
-            if (interval <= 0) { alert('間隔必須大於 0'); return; }
+            if (start >= end) { showMessage('開始時間必須小於結束時間', 'error'); return; }
+            if (interval <= 0) { showMessage('間隔必須大於 0', 'error'); return; }
+            
+            if (aiToggle.checked && !aiModelLoaded) {
+                const loaded = await loadAiModel();
+                if (!loaded) return; 
+            }
 
             isAutoCapturing = true;
             const btn = document.getElementById('btnAutoCapture');
             const originalHTML = btn.innerHTML;
             btn.innerHTML = `停止`;
             btn.classList.replace('bg-emerald-600', 'bg-red-600');
-            statusText.classList.remove('hidden');
             video.pause();
+            showMessage('開始自動截圖...', 'info');
 
             try {
                 for (let t = start; t <= end; t += interval) {
                     await seekTo(t);
-                    captureFrame(true);
-                    // 保持捲軸在最上方
+                    await captureFrame(true);
                     document.getElementById('galleryContainer').scrollTop = 0;
                 }
             } catch (err) { console.error(err); } 
@@ -379,11 +545,10 @@
                 isAutoCapturing = false;
                 btn.innerHTML = originalHTML;
                 btn.classList.replace('bg-red-600', 'bg-emerald-600');
-                statusText.classList.add('hidden');
+                showMessage('自動截圖完成', 'success');
             }
         });
 
-        // CSS Animation
         const style = document.createElement('style');
         style.innerHTML = `@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } } .animate-fadeIn { animation: fadeIn 0.3s ease-out forwards; }`;
         document.head.appendChild(style);
