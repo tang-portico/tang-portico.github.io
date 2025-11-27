@@ -84,20 +84,21 @@
     <div id="toastContainer" class="fixed top-0 left-1/2 z-50 pointer-events-none"></div>
 
     <!-- Header -->
-    <header class="bg-gray-900 border-b border-gray-800 p-4 flex-none z-20 shadow-lg h-16 flex items-center justify-between">
+    <header class="bg-gray-900 border-b border-gray-800 p-4 flex-none z-20 shadow-lg h-16 flex items-center justify-between relative">
         <div class="flex items-center gap-4">
             <h1 class="text-xl font-bold flex items-center gap-2 text-blue-400">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
-                片花YT封面製作工具 V2.0
+                片花YT封面製作工具 V2.1
             </h1>
-            <div id="modeIndicator" class="hidden md:flex text-xs font-mono bg-gray-800 rounded-full px-3 py-1 items-center gap-2 border border-gray-700">
-                <span id="step1-badge" class="text-blue-400 font-bold">Step 1: 截取</span>
-                <span class="text-gray-600">→</span>
-                <span id="step2-badge" class="text-gray-500">Step 2: 製作</span>
-            </div>
+        </div>
+        
+        <div id="modeIndicator" class="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 hidden md:flex text-xs font-mono bg-gray-800 rounded-full px-3 py-1 items-center gap-2 border border-gray-700">
+            <span id="step1-badge" class="text-blue-400 font-bold">Step 1: 截取</span>
+            <span class="text-gray-600">→</span>
+            <span id="step2-badge" class="text-gray-500">Step 2: 製作</span>
         </div>
         
         <div id="fileUploadContainer">
@@ -210,84 +211,90 @@
             </div>
         </div>
 
-        <!-- PANEL 3: Editor (Dual View) -->
+        <!-- PANEL 3: Editor (Dual View) - Fixed Scrolling -->
         <div id="editorPanel" class="w-full lg:w-8/12 h-full hidden flex-col bg-gray-800 rounded-xl border border-gray-700 shadow-2xl overflow-hidden panel-transition">
-            <div class="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-800 flex-none z-10">
-                <h3 class="text-lg font-bold text-white flex items-center gap-2"><span>🎨</span> 雙語封面製作器</h3>
-                <div class="flex gap-3">
-                    <button onclick="resetImageTransform()" class="text-xs text-gray-400 hover:text-white px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 transition flex items-center gap-1">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                        重置位置
-                    </button>
-                    <button onclick="downloadAll()" class="bg-green-600 hover:bg-green-500 text-white px-4 py-1.5 rounded-lg text-sm font-bold shadow-lg transition flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                        下載全部 (中+英)
-                    </button>
-                </div>
-            </div>
             
-            <div class="flex-1 flex flex-col lg:flex-row overflow-hidden min-h-0">
-                <!-- Canvas Area (Split View) -->
-                <div class="flex-1 bg-black/80 canvas-bg p-6 flex flex-col items-center justify-center overflow-y-auto custom-scroll gap-6">
-                    <div class="w-full max-w-[800px] flex flex-col gap-2">
-                        <span class="text-xs text-gray-400 font-bold ml-1 flex items-center justify-between">
-                            中文版預覽 
-                            <span class="text-[10px] text-gray-500 font-normal">🖱️ 拖曳可移動 / 滾輪可縮放</span>
-                        </span>
-                        <canvas id="canvasChi" class="w-full shadow-2xl border border-gray-600 rounded-sm grab-cursor"></canvas>
-                    </div>
-                    <div class="w-full max-w-[800px] flex flex-col gap-2">
-                        <span class="text-xs text-gray-400 font-bold ml-1">英文版預覽</span>
-                        <canvas id="canvasEn" class="w-full shadow-2xl border border-gray-600 rounded-sm grab-cursor"></canvas>
+            <div id="editorInnerContent" class="w-full h-full flex flex-col relative">
+                
+                <div class="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-800 flex-none z-10">
+                    <h3 class="text-lg font-bold text-white flex items-center gap-2"><span>🎨</span> 雙語封面製作器</h3>
+                    <div class="flex gap-3">
+                        <button onclick="resetImageTransform()" class="text-xs text-gray-400 hover:text-white px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 transition flex items-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                            重置位置
+                        </button>
+                        <button onclick="downloadAll()" class="bg-green-600 hover:bg-green-500 text-white px-4 py-1.5 rounded-lg text-sm font-bold shadow-lg transition flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                            下載全部 (中+英)
+                        </button>
                     </div>
                 </div>
                 
-                <!-- Editor Controls (Sidebar) -->
-                <div class="w-full lg:w-80 bg-gray-800 p-5 overflow-y-auto border-l border-gray-700 space-y-6 custom-scroll flex-none">
-                    
-                    <div>
-                        <label class="block text-xs font-bold text-gray-400 uppercase mb-2">劇名設定 (手動換行)</label>
-                        <div class="space-y-3">
-                            <div>
-                                <div class="text-xs text-blue-400 mb-1">中文劇名 (寬度: 648px)</div>
-                                <textarea id="titleChi" placeholder="輸入中文劇名...&#10;可按 Enter 換行" rows="3" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none font-bold" style="font-family: 'source-han-sans-cjk-tc', sans-serif;"></textarea>
-                            </div>
-                            <div>
-                                <div class="text-xs text-blue-400 mb-1">英文劇名 (寬度: 648px)</div>
-                                <textarea id="titleEn" placeholder="Input English Title...&#10;Press Enter to wrap" rows="3" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none font-medium" style="font-family: 'normalidad-compact', sans-serif;"></textarea>
-                            </div>
+                <!-- Editor Body: Scrollable on mobile, Fixed on Desktop -->
+                <div class="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden min-h-0">
+                    <!-- Canvas Area (Split View) -->
+                    <div class="flex-none lg:flex-1 bg-black/80 canvas-bg p-6 flex flex-col items-center justify-start lg:overflow-y-auto custom-scroll gap-6 min-h-[500px]">
+                        <div class="w-full max-w-[800px] flex flex-col gap-2 flex-none">
+                            <span class="text-xs text-gray-400 font-bold ml-1 flex items-center justify-between">
+                                中文版預覽 
+                                <span class="text-[10px] text-gray-500 font-normal">🖱️ 拖曳可移動 / 滾輪可縮放</span>
+                            </span>
+                            <canvas id="canvasChi" class="w-full shadow-2xl border border-gray-600 rounded-sm grab-cursor"></canvas>
+                        </div>
+                        <div class="w-full max-w-[800px] flex flex-col gap-2 flex-none">
+                            <span class="text-xs text-gray-400 font-bold ml-1">英文版預覽</span>
+                            <canvas id="canvasEn" class="w-full shadow-2xl border border-gray-600 rounded-sm grab-cursor"></canvas>
                         </div>
                     </div>
                     
-                    <div>
-                        <label class="block text-xs font-bold text-gray-400 uppercase mb-2">集數與標籤 (Episode/Tag)</label>
+                    <!-- Editor Controls (Sidebar) -->
+                    <div class="w-full lg:w-80 bg-gray-800 p-5 lg:overflow-y-auto border-l border-gray-700 space-y-6 custom-scroll flex-none">
                         
-                        <div class="flex items-center mb-3">
-                            <input type="checkbox" id="isSpinoff" class="w-4 h-4 text-purple-600 bg-gray-900 border-gray-600 rounded focus:ring-purple-600">
-                            <label for="isSpinoff" class="ml-2 text-sm text-gray-300 cursor-pointer font-bold text-purple-400">番外篇 (Spin-off)</label>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-2">劇名設定 (手動換行)</label>
+                            <div class="space-y-3">
+                                <div>
+                                    <div class="text-xs text-blue-400 mb-1">中文劇名 (寬度: 648px)</div>
+                                    <textarea id="titleChi" placeholder="輸入中文劇名...&#10;可按 Enter 換行" rows="3" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none font-bold" style="font-family: 'source-han-sans-cjk-tc', sans-serif;"></textarea>
+                                </div>
+                                <div>
+                                    <div class="text-xs text-blue-400 mb-1">英文劇名 (寬度: 648px)</div>
+                                    <textarea id="titleEn" placeholder="Input English Title...&#10;Press Enter to wrap" rows="3" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none font-medium" style="font-family: 'normalidad-compact', sans-serif;"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-2">集數與標籤 (Episode/Tag)</label>
+                            
+                            <div class="flex items-center mb-3">
+                                <input type="checkbox" id="isSpinoff" class="w-4 h-4 text-purple-600 bg-gray-900 border-gray-600 rounded focus:ring-purple-600">
+                                <label for="isSpinoff" class="ml-2 text-sm text-gray-300 cursor-pointer font-bold text-purple-400">番外篇 (Spin-off)</label>
+                            </div>
+
+                            <div class="flex gap-2 items-center" id="epInputGroup">
+                                <span class="text-sm text-gray-400 font-bold">EP</span>
+                                <input type="text" id="editEp" placeholder="01" class="w-24 bg-gray-900 border border-gray-600 rounded px-3 py-2 text-white text-sm text-center font-bold focus:border-blue-500 focus:outline-none">
+                            </div>
                         </div>
 
-                        <div class="flex gap-2 items-center" id="epInputGroup">
-                            <span class="text-sm text-gray-400 font-bold">EP</span>
-                            <input type="text" id="editEp" placeholder="01" class="w-24 bg-gray-900 border border-gray-600 rounded px-3 py-2 text-white text-sm text-center font-bold focus:border-blue-500 focus:outline-none">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-2">版權宣告 (Copyright)</label>
+                            <input type="text" id="editCopyright" placeholder="例如：©Film Partners" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none">
                         </div>
-                    </div>
 
-                    <div>
-                        <label class="block text-xs font-bold text-gray-400 uppercase mb-2">版權宣告 (Copyright)</label>
-                        <input type="text" id="editCopyright" placeholder="例如：©Film Partners" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none">
-                    </div>
-
-                    <div class="p-3 bg-gray-700/30 rounded border border-gray-700 text-xs text-gray-400 space-y-2">
-                        <p>💡 <b>提示：</b></p>
-                        <ul class="list-disc list-inside pl-1 space-y-1 opacity-80">
-                            <li>可直接在畫布上拖曳移動圖片</li>
-                            <li>滾動滑鼠滾輪可縮放</li>
-                            <li>系統會自動模糊填充背景</li>
-                        </ul>
+                        <div class="p-3 bg-gray-700/30 rounded border border-gray-700 text-xs text-gray-400 space-y-2">
+                            <p>💡 <b>提示：</b></p>
+                            <ul class="list-disc list-inside pl-1 space-y-1 opacity-80">
+                                <li>可直接在畫布上拖曳移動圖片</li>
+                                <li>滾動滑鼠滾輪可縮放</li>
+                                <li>系統會自動模糊填充背景</li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
-            </div>
+
+            </div> <!-- End of editorInnerContent -->
         </div>
 
     </main>
@@ -512,19 +519,44 @@
             // 3. Text
             if (titleText) {
                 ctx.fillStyle = "white";
+                let fontSize;
+                let lineHeight;
+                let letterSpacing = "0px"; // Default to 0px for Chinese now
+                let fontFamily;
+                let fontWeight;
+
                 if (lang === 'en') {
-                    ctx.font = `500 70px ${canvasFontFamilyEn}`;
+                    fontSize = 79; // 79pt
+                    lineHeight = 102; // 102pt
+                    fontFamily = canvasFontFamilyEn;
+                    fontWeight = 500;
                 } else {
-                    ctx.font = `700 70px ${canvasFontFamilyChi}`;
+                    fontSize = 80; // UPDATED: 80pt
+                    lineHeight = 105; // UPDATED: Adjusted for 80pt
+                    letterSpacing = "0px"; // Reverted to 0px
+                    fontFamily = canvasFontFamilyChi;
+                    fontWeight = 700;
+                }
+                
+                ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
+                
+                // Using ctx.letterSpacing (Supported in Chrome 94+, Firefox 103+, Safari 15.4+)
+                if ('letterSpacing' in ctx) {
+                    ctx.letterSpacing = letterSpacing;
                 }
                 
                 ctx.textAlign = "left";
                 ctx.textBaseline = "bottom";
                 const lines = titleText.split('\n');
-                const lineHeight = 80;
+                
                 for (let i = lines.length - 1; i >= 0; i--) {
                     let yPos = bottomY - ((lines.length - 1 - i) * lineHeight);
                     ctx.fillText(lines[i], x, yPos);
+                }
+                
+                // Reset letterSpacing
+                if ('letterSpacing' in ctx) {
+                    ctx.letterSpacing = "0px";
                 }
             }
 
@@ -552,12 +584,14 @@
                 const fixedHeight = 137;
                 let badgeW = Math.max(255, textMetrics.width + (paddingX * 2));
                 
-                const rightMargin = 50; 
+                // Position Update: Top 20px, Right 25px
+                const rightMargin = 25; 
                 const badgeX = w - rightMargin - badgeW;
-                const badgeY = 50; 
+                const badgeY = 20; 
 
                 ctx.fillStyle = "white";
-                roundRect(ctx, badgeX, badgeY, badgeW, fixedHeight, 20, true, false);
+                // Radius changed to 32.5
+                roundRect(ctx, badgeX, badgeY, badgeW, fixedHeight, 32.5, true, false);
 
                 ctx.fillStyle = badgeColor;
                 ctx.textAlign = "center";
@@ -585,18 +619,23 @@
             }
         }
 
+        function downloadLink(url, filename) {
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
         function downloadAll() {
-            const linkChi = document.createElement('a');
-            linkChi.download = `Cover_Chi_${(titleChi.value || 'Untitled').replace(/\n/g, '')}_EP${editEp.value}.jpg`;
-            linkChi.href = canvasChi.toDataURL('image/jpeg', 0.95);
-            linkChi.click();
+            const nameChi = `Cover_Chi_${(titleChi.value || 'Untitled').replace(/\n/g, '')}_EP${editEp.value}.jpg`;
+            downloadLink(canvasChi.toDataURL('image/jpeg', 0.95), nameChi);
 
             setTimeout(() => {
-                const linkEn = document.createElement('a');
-                linkEn.download = `Cover_En_${(titleEn.value || 'Untitled').replace(/\n/g, '')}_EP${editEp.value}.jpg`;
-                linkEn.href = canvasEn.toDataURL('image/jpeg', 0.95);
-                linkEn.click();
-            }, 200);
+                const nameEn = `Cover_En_${(titleEn.value || 'Untitled').replace(/\n/g, '')}_EP${editEp.value}.jpg`;
+                downloadLink(canvasEn.toDataURL('image/jpeg', 0.95), nameEn);
+            }, 500); // Increased delay to 500ms to prevent browser blocking
         }
 
         // --- Standard Helpers ---
