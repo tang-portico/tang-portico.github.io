@@ -519,9 +519,13 @@
             // 3. Text
             if (titleText) {
                 ctx.fillStyle = "white";
+                // Stroke setup
+                ctx.strokeStyle = "black";
+                ctx.lineWidth = 4;
+
                 let fontSize;
                 let lineHeight;
-                let letterSpacing = "0px"; // Default to 0px for Chinese now
+                let letterSpacing = "0px"; 
                 let fontFamily;
                 let fontWeight;
 
@@ -531,9 +535,9 @@
                     fontFamily = canvasFontFamilyEn;
                     fontWeight = 500;
                 } else {
-                    fontSize = 80; // UPDATED: 80pt
-                    lineHeight = 105; // UPDATED: Adjusted for 80pt
-                    letterSpacing = "0px"; // Reverted to 0px
+                    fontSize = 80; // 80pt
+                    lineHeight = 105; // Adjusted for 80pt
+                    letterSpacing = "0px"; 
                     fontFamily = canvasFontFamilyChi;
                     fontWeight = 700;
                 }
@@ -551,7 +555,8 @@
                 
                 for (let i = lines.length - 1; i >= 0; i--) {
                     let yPos = bottomY - ((lines.length - 1 - i) * lineHeight);
-                    ctx.fillText(lines[i], x, yPos);
+                    ctx.strokeText(lines[i], x, yPos); // Draw Stroke
+                    ctx.fillText(lines[i], x, yPos);   // Draw Fill
                 }
                 
                 // Reset letterSpacing
@@ -584,13 +589,11 @@
                 const fixedHeight = 137;
                 let badgeW = Math.max(255, textMetrics.width + (paddingX * 2));
                 
-                // Position Update: Top 20px, Right 25px
                 const rightMargin = 25; 
                 const badgeX = w - rightMargin - badgeW;
                 const badgeY = 20; 
 
                 ctx.fillStyle = "white";
-                // Radius changed to 32.5
                 roundRect(ctx, badgeX, badgeY, badgeW, fixedHeight, 32.5, true, false);
 
                 ctx.fillStyle = badgeColor;
@@ -606,7 +609,7 @@
             // 5. Copyright
             if (editCopyright.value.trim()) {
                 ctx.save();
-                ctx.fillStyle = "rgba(255, 255, 255, 1.0)";
+                ctx.fillStyle = "rgba(255, 255, 255, 1.0)"; 
                 ctx.font = `bold 18px ${canvasFontFamilyChi}`; 
                 ctx.textAlign = "right";
                 ctx.textBaseline = "bottom";
@@ -635,7 +638,7 @@
             setTimeout(() => {
                 const nameEn = `Cover_En_${(titleEn.value || 'Untitled').replace(/\n/g, '')}_EP${editEp.value}.jpg`;
                 downloadLink(canvasEn.toDataURL('image/jpeg', 0.95), nameEn);
-            }, 500); // Increased delay to 500ms to prevent browser blocking
+            }, 500); 
         }
 
         // --- Standard Helpers ---
