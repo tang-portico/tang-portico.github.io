@@ -1,0 +1,61 @@
+/* Logo Controls Layout */
+.logo-controls {
+    display: flex;
+    gap: 10px;
+    align-items: stretch;
+    margin-bottom: 5px;
+}
+
+.logo-controls .file-btn {
+    flex: 1;
+    /* Takes up most space */
+    margin-bottom: 0;
+    /* Reset default margin */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Language Switcher - Segmented Control Style */
+.lang-switch {
+    display: flex;
+    background: #222;
+    border-radius: 4px;
+    padding: 3px;
+    border: 1px solid #666;
+    /* Match file-btn border somewhat */
+    border-style: dashed;
+    /* Maybe? No, solid for controls */
+    border-style: solid;
+    border-color: #666;
+    width: 80px;
+    flex-shrink: 0;
+}
+
+.lang-btn {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: #888;
+    border-radius: 2px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 0;
+    /* Centering handled by flex in parent if needed, or default text align */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.lang-btn:hover {
+    color: #ccc;
+}
+
+.lang-btn.active {
+    background: var(--accent-color);
+    color: #000;
+    font-weight: bold;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}

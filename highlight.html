@@ -1,118 +1,74 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>片花YT封面製作工具 - GagaOOLala</title>
-    
+
     <!-- Adobe Fonts (Typekit) Advanced Embed Code -->
     <script>
-      (function(d) {
-        var config = {
-          kitId: 'joc2vce',
-          scriptTimeout: 3000,
-          async: true
-        },
-        h=d.documentElement,t=setTimeout(function(){h.className=h.className.replace(/\bwf-loading\b/g,"")+" wf-inactive";},config.scriptTimeout),tk=d.createElement("script"),f=false,s=d.getElementsByTagName("script")[0],a;h.className+=" wf-loading";tk.src='https://use.typekit.net/'+config.kitId+'.js';tk.async=true;tk.onload=tk.onreadystatechange=function(){a=this.readyState;if(f||a&&a!="complete"&&a!="loaded")return;f=true;clearTimeout(t);try{Typekit.load(config)}catch(e){}};s.parentNode.insertBefore(tk,s)
-      })(document);
+        (function (d) {
+            var config = {
+                kitId: 'joc2vce',
+                scriptTimeout: 3000,
+                async: true
+            },
+                h = d.documentElement, t = setTimeout(function () { h.className = h.className.replace(/\bwf-loading\b/g, "") + " wf-inactive"; }, config.scriptTimeout), tk = d.createElement("script"), f = false, s = d.getElementsByTagName("script")[0], a; h.className += " wf-loading"; tk.src = 'https://use.typekit.net/' + config.kitId + '.js'; tk.async = true; tk.onload = tk.onreadystatechange = function () { a = this.readyState; if (f || a && a != "complete" && a != "loaded") return; f = true; clearTimeout(t); try { Typekit.load(config) } catch (e) { } }; s.parentNode.insertBefore(tk, s)
+        })(document);
     </script>
 
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <script src="js/vendor/tailwindcss.js"></script>
+    <script src="js/vendor/face-api.min.js"></script>
 
-    <style>
-        .custom-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
-        .custom-scroll::-webkit-scrollbar-track { background: transparent; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 99px; }
-        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #6b7280; }
-        
-        /* 設定網頁預設字體 */
-        body { font-family: "source-han-sans-cjk-tc", "normalidad-compact", system-ui, -apple-system, sans-serif; }
-        
-        /* 避免字體載入時的閃爍 (Fout) */
-        .wf-loading body { visibility: hidden; }
-        .wf-active body, .wf-inactive body { visibility: visible; }
-        
-        .gallery-grid-layout {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-            gap: 1rem;
-            align-content: start;
-        }
-
-        .no-face-dimmed { opacity: 0.3; filter: grayscale(100%); transition: all 0.3s ease; }
-        .no-face-dimmed:hover { opacity: 1; filter: grayscale(0%); }
-
-        @keyframes slideDown {
-            from { transform: translate(-50%, -100%); opacity: 0; }
-            to { transform: translate(-50%, 20px); opacity: 1; }
-        }
-        .toast-notification { animation: slideDown 0.3s ease-out forwards; }
-
-        .panel-transition { transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
-        
-        .canvas-bg {
-            background-image: 
-                linear-gradient(45deg, #1f2937 25%, transparent 25%), 
-                linear-gradient(-45deg, #1f2937 25%, transparent 25%), 
-                linear-gradient(45deg, transparent 75%, #1f2937 75%), 
-                linear-gradient(-45deg, transparent 75%, #1f2937 75%);
-            background-size: 20px 20px;
-            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
-        }
-
-        /* Canvas cursor styles */
-        .grab-cursor { cursor: grab; }
-        .grab-cursor:active { cursor: grabbing; }
-        
-        /* Footer 小字樣式調整 */
-        .footer {
-            text-align: center;
-            font-size: 10px; /* 縮小字體 */
-            color: #9ca3af;
-            padding: 4px;
-            opacity: 0.6; /* 降低透明度 */
-            transition: opacity 0.3s;
-        }
-        .footer:hover {
-            opacity: 1;
-        }
-    </style>
+    <link rel="stylesheet" href="css/highlight.css">
 </head>
+
 <body class="bg-gray-950 text-gray-100 h-screen w-screen overflow-hidden flex flex-col relative">
 
     <div id="toastContainer" class="fixed top-0 left-1/2 z-50 pointer-events-none"></div>
 
     <!-- Header -->
-    <header class="bg-gray-900 border-b border-gray-800 p-4 flex-none z-20 shadow-lg h-16 flex items-center justify-between relative">
+    <header
+        class="bg-gray-900 border-b border-gray-800 p-4 flex-none z-20 shadow-lg h-16 flex items-center justify-between relative">
         <div class="flex items-center gap-4">
             <h1 class="text-xl font-bold flex items-center gap-2 text-blue-400">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
                 片花YT封面製作工具 V2.1
             </h1>
         </div>
-        
-        <div id="modeIndicator" class="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 hidden md:flex text-xs font-mono bg-gray-800 rounded-full px-3 py-1 items-center gap-2 border border-gray-700">
+
+        <div id="modeIndicator"
+            class="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 hidden md:flex text-xs font-mono bg-gray-800 rounded-full px-3 py-1 items-center gap-2 border border-gray-700">
             <span id="step1-badge" class="text-blue-400 font-bold">Step 1: 截取</span>
             <span class="text-gray-600">→</span>
             <span id="step2-badge" class="text-gray-500">Step 2: 製作</span>
         </div>
-        
+
         <div id="fileUploadContainer">
-            <label for="videoInput" class="cursor-pointer bg-blue-600 hover:bg-blue-500 text-white px-5 py-1.5 rounded-full transition flex items-center gap-2 shadow-lg hover:shadow-blue-500/30 text-sm font-medium">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            <label for="videoInput"
+                class="cursor-pointer bg-blue-600 hover:bg-blue-500 text-white px-5 py-1.5 rounded-full transition flex items-center gap-2 shadow-lg hover:shadow-blue-500/30 text-sm font-medium">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                 </svg>
                 <span>選擇影片</span>
             </label>
             <input type="file" id="videoInput" accept="video/*" class="hidden">
         </div>
-        
-        <button id="backToCaptureBtn" onclick="switchMode('capture')" class="hidden bg-gray-700 hover:bg-gray-600 text-white px-5 py-1.5 rounded-full transition flex items-center gap-2 border border-gray-600">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+
+        <button id="backToCaptureBtn" onclick="switchMode('capture')"
+            class="hidden bg-gray-700 hover:bg-gray-600 text-white px-5 py-1.5 rounded-full transition flex items-center gap-2 border border-gray-600">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
             <span>返回截圖模式</span>
@@ -121,15 +77,19 @@
 
     <!-- Main Content -->
     <main class="flex-1 w-full max-w-[1920px] mx-auto p-4 lg:p-6 flex gap-6 min-h-0 overflow-hidden relative">
-        
+
         <!-- PANEL 1: Video & Controls -->
         <div id="videoPanel" class="w-full lg:w-7/12 h-full flex flex-col gap-4 overflow-hidden panel-transition">
-            <div class="flex-1 min-h-0 bg-black rounded-xl overflow-hidden shadow-2xl border border-gray-800 relative group ring-1 ring-white/10 flex flex-col justify-center">
+            <div
+                class="flex-1 min-h-0 bg-black rounded-xl overflow-hidden shadow-2xl border border-gray-800 relative group ring-1 ring-white/10 flex flex-col justify-center">
                 <video id="mainVideo" class="w-full h-full object-contain" controls crossorigin="anonymous"></video>
-                <div id="dropMessage" class="absolute inset-0 flex flex-col items-center justify-center text-gray-500 pointer-events-none bg-gray-900/90 backdrop-blur-sm transition-opacity z-10">
+                <div id="dropMessage"
+                    class="absolute inset-0 flex flex-col items-center justify-center text-gray-500 pointer-events-none bg-gray-900/90 backdrop-blur-sm transition-opacity z-10">
                     <div class="bg-gray-800 p-6 rounded-2xl border border-gray-700 shadow-xl text-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mb-4 opacity-50 text-blue-400 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mb-4 opacity-50 text-blue-400 mx-auto"
+                            fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                         </svg>
                         <p class="text-lg font-medium text-gray-200">拖曳影片至此</p>
                     </div>
@@ -141,27 +101,36 @@
                     <h2 class="text-sm font-bold text-gray-300 uppercase tracking-wider flex items-center gap-2">
                         <span class="w-2 h-2 bg-blue-500 rounded-full"></span> 截圖設定
                     </h2>
-                    <span id="videoDuration" class="font-mono text-xs text-blue-300 bg-blue-900/30 px-2 py-0.5 rounded border border-blue-800/50">00:00:00</span>
+                    <span id="videoDuration"
+                        class="font-mono text-xs text-blue-300 bg-blue-900/30 px-2 py-0.5 rounded border border-blue-800/50">00:00:00</span>
                 </div>
 
                 <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                     <div class="lg:col-span-1">
                         <label class="text-[10px] font-semibold text-gray-500 uppercase block mb-1">開始時間</label>
                         <div class="flex">
-                            <input type="text" id="startTime" value="00:00:00" class="w-full bg-gray-900 border border-gray-600 rounded-l px-2 py-1.5 text-center font-mono text-sm text-white focus:outline-none focus:border-blue-500">
-                            <button onclick="setCurrentTime('start')" class="bg-gray-700 hover:bg-gray-600 px-2 rounded-r border-y border-r border-gray-600" title="設為當前">📍</button>
+                            <input type="text" id="startTime" value="00:00:00"
+                                class="w-full bg-gray-900 border border-gray-600 rounded-l px-2 py-1.5 text-center font-mono text-sm text-white focus:outline-none focus:border-blue-500">
+                            <button onclick="setCurrentTime('start')"
+                                class="bg-gray-700 hover:bg-gray-600 px-2 rounded-r border-y border-r border-gray-600"
+                                title="設為當前">📍</button>
                         </div>
                     </div>
                     <div class="lg:col-span-1">
                         <label class="text-[10px] font-semibold text-gray-500 uppercase block mb-1">結束時間</label>
                         <div class="flex">
-                            <input type="text" id="endTime" value="00:00:10" class="w-full bg-gray-900 border border-gray-600 rounded-l px-2 py-1.5 text-center font-mono text-sm text-white focus:outline-none focus:border-blue-500">
-                            <button onclick="setCurrentTime('end')" class="bg-gray-700 hover:bg-gray-600 px-2 rounded-r border-y border-r border-gray-600" title="設為當前">📍</button>
+                            <input type="text" id="endTime" value="00:00:10"
+                                class="w-full bg-gray-900 border border-gray-600 rounded-l px-2 py-1.5 text-center font-mono text-sm text-white focus:outline-none focus:border-blue-500">
+                            <button onclick="setCurrentTime('end')"
+                                class="bg-gray-700 hover:bg-gray-600 px-2 rounded-r border-y border-r border-gray-600"
+                                title="設為當前">📍</button>
                         </div>
                     </div>
                     <div class="lg:col-span-2">
-                        <label class="text-[10px] font-semibold text-gray-500 uppercase block mb-1">間隔: <span id="intervalDisplay" class="text-blue-400">5.0</span> 秒</label>
-                        <input type="range" id="intervalRange" min="0.5" max="60" step="0.5" value="5" class="w-full h-1.5 bg-gray-900 rounded-lg appearance-none cursor-pointer accent-blue-500 mt-2">
+                        <label class="text-[10px] font-semibold text-gray-500 uppercase block mb-1">間隔: <span
+                                id="intervalDisplay" class="text-blue-400">5.0</span> 秒</label>
+                        <input type="range" id="intervalRange" min="0.5" max="60" step="0.5" value="5"
+                            class="w-full h-1.5 bg-gray-900 rounded-lg appearance-none cursor-pointer accent-blue-500 mt-2">
                         <input type="number" id="intervalTime" value="5" class="hidden">
                     </div>
                 </div>
@@ -169,14 +138,18 @@
                 <div class="mb-4 bg-gray-900/50 p-3 rounded-lg border border-gray-700/50 flex flex-col gap-2">
                     <div class="flex items-center justify-between">
                         <div class="flex items-center gap-2">
-                            <input type="checkbox" id="aiToggle" class="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-600 focus:ring-2">
-                            <label for="aiToggle" class="text-xs font-medium text-gray-300 cursor-pointer select-none flex items-center gap-1"><span>🤖</span> 啟用 AI 人臉過濾</label>
+                            <input type="checkbox" id="aiToggle"
+                                class="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-600 focus:ring-2">
+                            <label for="aiToggle"
+                                class="text-xs font-medium text-gray-300 cursor-pointer select-none flex items-center gap-1"><span>🤖</span>
+                                啟用 AI 人臉過濾</label>
                         </div>
                         <span id="modelStatus" class="text-[10px] text-gray-500">等待啟用</span>
                     </div>
                     <div class="flex items-center gap-2 mt-1 pl-6">
                         <span class="text-[10px] text-gray-400">模式:</span>
-                        <select id="modelSelect" class="bg-gray-800 text-white text-xs border border-gray-600 rounded px-2 py-1 focus:outline-none focus:border-blue-500">
+                        <select id="modelSelect"
+                            class="bg-gray-800 text-white text-xs border border-gray-600 rounded px-2 py-1 focus:outline-none focus:border-blue-500">
                             <option value="ssd">高精準模式 (SSD)</option>
                             <option value="tiny">極速模式 (Tiny)</option>
                         </select>
@@ -184,26 +157,34 @@
                 </div>
 
                 <div class="flex gap-3">
-                    <button id="btnManualCapture" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white py-2 rounded-lg font-medium text-sm transition shadow-lg shadow-indigo-900/20 flex justify-center items-center gap-2">單張截圖</button>
-                    <button id="btnAutoCapture" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-2 rounded-lg font-medium text-sm transition shadow-lg shadow-emerald-900/20 flex justify-center items-center gap-2">執行區間截圖</button>
+                    <button id="btnManualCapture"
+                        class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white py-2 rounded-lg font-medium text-sm transition shadow-lg shadow-indigo-900/20 flex justify-center items-center gap-2">單張截圖</button>
+                    <button id="btnAutoCapture"
+                        class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-2 rounded-lg font-medium text-sm transition shadow-lg shadow-emerald-900/20 flex justify-center items-center gap-2">執行區間截圖</button>
                 </div>
             </div>
         </div>
 
         <!-- PANEL 2: Gallery -->
-        <div id="galleryPanel" class="w-full lg:w-5/12 h-full flex flex-col bg-gray-800 rounded-xl border border-gray-700 shadow-2xl overflow-hidden panel-transition transition-all duration-500">
+        <div id="galleryPanel"
+            class="w-full lg:w-5/12 h-full flex flex-col bg-gray-800 rounded-xl border border-gray-700 shadow-2xl overflow-hidden panel-transition transition-all duration-500">
             <div class="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-800 flex-none z-10">
                 <div class="flex items-center gap-2">
                     <span class="font-bold text-gray-200">截圖畫廊</span>
-                    <span class="text-xs font-mono bg-gray-700 text-gray-300 px-2 py-0.5 rounded-full" id="countDisplay">0</span>
+                    <span class="text-xs font-mono bg-gray-700 text-gray-300 px-2 py-0.5 rounded-full"
+                        id="countDisplay">0</span>
                 </div>
-                <button id="btnClear" onclick="clearGallery()" class="text-xs text-red-400 hover:text-red-300 px-3 py-1 rounded hover:bg-red-400/10 transition border border-transparent">清空</button>
+                <button id="btnClear" onclick="clearGallery()"
+                    class="text-xs text-red-400 hover:text-red-300 px-3 py-1 rounded hover:bg-red-400/10 transition border border-transparent">清空</button>
             </div>
             <div id="galleryContainer" class="flex-1 min-h-0 overflow-y-auto custom-scroll p-[15px] bg-gray-900/30">
                 <div id="gallery" class="gallery-grid-layout w-full">
-                    <div id="emptyState" class="col-span-full flex flex-col items-center justify-center text-gray-600 h-64 border-2 border-dashed border-gray-800 rounded-xl">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mb-2 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    <div id="emptyState"
+                        class="col-span-full flex flex-col items-center justify-center text-gray-600 h-64 border-2 border-dashed border-gray-800 rounded-xl">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mb-2 opacity-50" fill="none"
+                            viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
                         <p class="text-sm">尚未有截圖</p>
                     </div>
@@ -212,75 +193,101 @@
         </div>
 
         <!-- PANEL 3: Editor (Dual View) - Fixed Scrolling -->
-        <div id="editorPanel" class="w-full lg:w-8/12 h-full hidden flex-col bg-gray-800 rounded-xl border border-gray-700 shadow-2xl overflow-hidden panel-transition">
-            
+        <div id="editorPanel"
+            class="w-full lg:w-8/12 h-full hidden flex-col bg-gray-800 rounded-xl border border-gray-700 shadow-2xl overflow-hidden panel-transition">
+
             <div id="editorInnerContent" class="w-full h-full flex flex-col relative">
-                
+
                 <div class="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-800 flex-none z-10">
                     <h3 class="text-lg font-bold text-white flex items-center gap-2"><span>🎨</span> 雙語封面製作器</h3>
                     <div class="flex gap-3">
-                        <button onclick="resetImageTransform()" class="text-xs text-gray-400 hover:text-white px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 transition flex items-center gap-1">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                        <button onclick="resetImageTransform()"
+                            class="text-xs text-gray-400 hover:text-white px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 transition flex items-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
                             重置位置
                         </button>
-                        <button onclick="downloadAll()" class="bg-green-600 hover:bg-green-500 text-white px-4 py-1.5 rounded-lg text-sm font-bold shadow-lg transition flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                        <button onclick="downloadAll()"
+                            class="bg-green-600 hover:bg-green-500 text-white px-4 py-1.5 rounded-lg text-sm font-bold shadow-lg transition flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
                             下載全部 (中+英)
                         </button>
                     </div>
                 </div>
-                
+
                 <!-- Editor Body: Scrollable on mobile, Fixed on Desktop -->
                 <div class="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden min-h-0">
                     <!-- Canvas Area (Split View) -->
-                    <div class="flex-none lg:flex-1 bg-black/80 canvas-bg p-6 flex flex-col items-center justify-start lg:overflow-y-auto custom-scroll gap-6 min-h-[500px]">
+                    <div
+                        class="flex-none lg:flex-1 bg-black/80 canvas-bg p-6 flex flex-col items-center justify-start lg:overflow-y-auto custom-scroll gap-6 min-h-[500px]">
                         <div class="w-full max-w-[800px] flex flex-col gap-2 flex-none">
                             <span class="text-xs text-gray-400 font-bold ml-1 flex items-center justify-between">
-                                中文版預覽 
+                                中文版預覽
                                 <span class="text-[10px] text-gray-500 font-normal">🖱️ 拖曳可移動 / 滾輪可縮放</span>
                             </span>
-                            <canvas id="canvasChi" class="w-full shadow-2xl border border-gray-600 rounded-sm grab-cursor"></canvas>
+                            <canvas id="canvasChi"
+                                class="w-full shadow-2xl border border-gray-600 rounded-sm grab-cursor"></canvas>
                         </div>
                         <div class="w-full max-w-[800px] flex flex-col gap-2 flex-none">
                             <span class="text-xs text-gray-400 font-bold ml-1">英文版預覽</span>
-                            <canvas id="canvasEn" class="w-full shadow-2xl border border-gray-600 rounded-sm grab-cursor"></canvas>
+                            <canvas id="canvasEn"
+                                class="w-full shadow-2xl border border-gray-600 rounded-sm grab-cursor"></canvas>
                         </div>
                     </div>
-                    
+
                     <!-- Editor Controls (Sidebar) -->
-                    <div class="w-full lg:w-80 bg-gray-800 p-5 lg:overflow-y-auto border-l border-gray-700 space-y-6 custom-scroll flex-none">
-                        
+                    <div
+                        class="w-full lg:w-80 bg-gray-800 p-5 lg:overflow-y-auto border-l border-gray-700 space-y-6 custom-scroll flex-none">
+
                         <div>
                             <label class="block text-xs font-bold text-gray-400 uppercase mb-2">劇名設定 (手動換行)</label>
                             <div class="space-y-3">
                                 <div>
                                     <div class="text-xs text-blue-400 mb-1">中文劇名 (寬度: 648px)</div>
-                                    <textarea id="titleChi" placeholder="輸入中文劇名...&#10;可按 Enter 換行" rows="3" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none font-bold" style="font-family: 'source-han-sans-cjk-tc', sans-serif;"></textarea>
+                                    <textarea id="titleChi" placeholder="輸入中文劇名...&#10;可按 Enter 換行" rows="3"
+                                        class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none font-bold"
+                                        style="font-family: 'source-han-sans-cjk-tc', sans-serif;"></textarea>
                                 </div>
                                 <div>
                                     <div class="text-xs text-blue-400 mb-1">英文劇名 (寬度: 648px)</div>
-                                    <textarea id="titleEn" placeholder="Input English Title...&#10;Press Enter to wrap" rows="3" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none font-medium" style="font-family: 'normalidad-compact', sans-serif;"></textarea>
+                                    <textarea id="titleEn" placeholder="Input English Title...&#10;Press Enter to wrap"
+                                        rows="3"
+                                        class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none font-medium"
+                                        style="font-family: 'normalidad-compact', sans-serif;"></textarea>
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div>
-                            <label class="block text-xs font-bold text-gray-400 uppercase mb-2">集數與標籤 (Episode/Tag)</label>
-                            
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-2">集數與標籤
+                                (Episode/Tag)</label>
+
                             <div class="flex items-center mb-3">
-                                <input type="checkbox" id="isSpinoff" class="w-4 h-4 text-purple-600 bg-gray-900 border-gray-600 rounded focus:ring-purple-600">
-                                <label for="isSpinoff" class="ml-2 text-sm text-gray-300 cursor-pointer font-bold text-purple-400">番外篇 (Spin-off)</label>
+                                <input type="checkbox" id="isSpinoff"
+                                    class="w-4 h-4 text-purple-600 bg-gray-900 border-gray-600 rounded focus:ring-purple-600">
+                                <label for="isSpinoff"
+                                    class="ml-2 text-sm text-gray-300 cursor-pointer font-bold text-purple-400">番外篇
+                                    (Spin-off)</label>
                             </div>
 
                             <div class="flex gap-2 items-center" id="epInputGroup">
                                 <span class="text-sm text-gray-400 font-bold">EP</span>
-                                <input type="text" id="editEp" placeholder="01" class="w-24 bg-gray-900 border border-gray-600 rounded px-3 py-2 text-white text-sm text-center font-bold focus:border-blue-500 focus:outline-none">
+                                <input type="text" id="editEp" placeholder="01"
+                                    class="w-24 bg-gray-900 border border-gray-600 rounded px-3 py-2 text-white text-sm text-center font-bold focus:border-blue-500 focus:outline-none">
                             </div>
                         </div>
 
                         <div>
                             <label class="block text-xs font-bold text-gray-400 uppercase mb-2">版權宣告 (Copyright)</label>
-                            <input type="text" id="editCopyright" placeholder="例如：©Film Partners" class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none">
+                            <input type="text" id="editCopyright" placeholder="例如：©Film Partners"
+                                class="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none">
                         </div>
 
                         <div class="p-3 bg-gray-700/30 rounded border border-gray-700 text-xs text-gray-400 space-y-2">
@@ -302,527 +309,15 @@
     <!-- Footer: Updated small size -->
     <footer class="bg-gray-900 border-t border-gray-800 p-1 flex-none z-20">
         <div class="footer flex flex-col items-center justify-center gap-0">
-            <img src="https://img.gagaoolala.com/assets/v2.1.1/img/ui/logo.png" alt="GagaOOLala Logo" width="80" height="17" class="opacity-50">
+            <img src="https://img.gagaoolala.com/assets/v2.1.1/img/ui/logo.png" alt="GagaOOLala Logo" width="80"
+                height="17" class="opacity-50">
             <div>GagaOOLala 設計部開發</div>
         </div>
     </footer>
 
     <canvas id="canvas" class="hidden"></canvas>
 
-    <script>
-        const canvasFontFamilyChi = '"source-han-sans-cjk-tc", sans-serif';
-        const canvasFontFamilyEn = '"normalidad-compact", sans-serif';
-
-        // DOM Elements
-        const videoInput = document.getElementById('videoInput');
-        const video = document.getElementById('mainVideo');
-        const canvas = document.getElementById('canvas');
-        const gallery = document.getElementById('gallery');
-        const countDisplay = document.getElementById('countDisplay');
-        const emptyState = document.getElementById('emptyState');
-        const dropMessage = document.getElementById('dropMessage');
-        const intervalRange = document.getElementById('intervalRange');
-        const intervalInput = document.getElementById('intervalTime');
-        const intervalDisplay = document.getElementById('intervalDisplay');
-        const aiToggle = document.getElementById('aiToggle');
-        const modelSelect = document.getElementById('modelSelect');
-        const modelStatus = document.getElementById('modelStatus');
-        const ctx = canvas.getContext('2d');
-
-        // Panels
-        const videoPanel = document.getElementById('videoPanel');
-        const galleryPanel = document.getElementById('galleryPanel');
-        const editorPanel = document.getElementById('editorPanel');
-        
-        // Header Controls
-        const fileUploadContainer = document.getElementById('fileUploadContainer');
-        const backToCaptureBtn = document.getElementById('backToCaptureBtn');
-        const step1Badge = document.getElementById('step1-badge');
-        const step2Badge = document.getElementById('step2-badge');
-
-        // Editor Canvases
-        const canvasChi = document.getElementById('canvasChi');
-        const ctxChi = canvasChi.getContext('2d');
-        const canvasEn = document.getElementById('canvasEn');
-        const ctxEn = canvasEn.getContext('2d');
-
-        // Inputs
-        const titleChi = document.getElementById('titleChi');
-        const titleEn = document.getElementById('titleEn');
-        const editEp = document.getElementById('editEp');
-        const editCopyright = document.getElementById('editCopyright');
-        const isSpinoff = document.getElementById('isSpinoff');
-        const epInputGroup = document.getElementById('epInputGroup');
-
-        let currentEditImage = null;
-        let templates = { chi: new Image(), en: new Image() };
-        
-        // Image Transform State
-        let imgTransform = { x: 0, y: 0, scale: 1 };
-        let isDragging = false;
-        let lastMousePos = { x: 0, y: 0 };
-
-        // Load templates
-        templates.chi.crossOrigin = "anonymous";
-        templates.chi.src = "https://tang-portico.github.io/img/YT_temp_Chi.png";
-        templates.en.crossOrigin = "anonymous";
-        templates.en.src = "https://tang-portico.github.io/img/YT_temp_en.png";
-
-        let isAutoCapturing = false;
-        let captureCount = 0;
-        let aiModelLoaded = false;
-        let loadedModels = { ssd: false, tiny: false };
-
-        function switchMode(mode) {
-            if (mode === 'edit') {
-                videoPanel.classList.add('hidden');
-                fileUploadContainer.classList.add('hidden');
-                backToCaptureBtn.classList.remove('hidden');
-                galleryPanel.classList.remove('lg:w-5/12');
-                galleryPanel.classList.add('lg:w-4/12'); 
-                editorPanel.classList.remove('hidden');
-                step1Badge.classList.remove('text-blue-400', 'font-bold');
-                step1Badge.classList.add('text-gray-500');
-                step2Badge.classList.remove('text-gray-500');
-                step2Badge.classList.add('text-blue-400', 'font-bold');
-            } else {
-                editorPanel.classList.add('hidden');
-                galleryPanel.classList.remove('lg:w-4/12');
-                galleryPanel.classList.add('lg:w-5/12');
-                videoPanel.classList.remove('hidden');
-                fileUploadContainer.classList.remove('hidden');
-                backToCaptureBtn.classList.add('hidden');
-                step1Badge.classList.add('text-blue-400', 'font-bold');
-                step1Badge.classList.remove('text-gray-500');
-                step2Badge.classList.add('text-gray-500');
-                step2Badge.classList.remove('text-blue-400', 'font-bold');
-            }
-        }
-
-        function openEditor(imageUrl) {
-            currentEditImage = new Image();
-            currentEditImage.onload = () => {
-                canvasChi.width = 1920; canvasChi.height = 1080;
-                canvasEn.width = 1920; canvasEn.height = 1080;
-                
-                // Init transform to cover
-                resetImageTransform();
-                
-                updateThumbnails();
-                switchMode('edit');
-            };
-            currentEditImage.src = imageUrl;
-        }
-
-        // --- Interaction Logic (Pan & Zoom) ---
-        function resetImageTransform() {
-            if(!currentEditImage) return;
-            const w = 1920, h = 1080;
-            const imgRatio = currentEditImage.width / currentEditImage.height;
-            const canvasRatio = w / h;
-            
-            // Calculate scale to "Cover"
-            let scale;
-            if (imgRatio > canvasRatio) scale = h / currentEditImage.height;
-            else scale = w / currentEditImage.width;
-            
-            imgTransform = { x: 0, y: 0, scale: scale }; // Centered logic is handled in draw
-            updateThumbnails();
-        }
-
-        function setupCanvasInteraction(canvasEl) {
-            canvasEl.addEventListener('mousedown', (e) => {
-                isDragging = true;
-                lastMousePos = { x: e.clientX, y: e.clientY };
-            });
-            window.addEventListener('mouseup', () => isDragging = false);
-            window.addEventListener('mousemove', (e) => {
-                if (!isDragging || !currentEditImage) return;
-                const dx = e.clientX - lastMousePos.x;
-                const dy = e.clientY - lastMousePos.y;
-                lastMousePos = { x: e.clientX, y: e.clientY };
-                
-                // Adjust sensitivity relative to canvas display size
-                const rect = canvasEl.getBoundingClientRect();
-                const scaleFactor = 1920 / rect.width;
-                
-                imgTransform.x += dx * scaleFactor;
-                imgTransform.y += dy * scaleFactor;
-                updateThumbnails();
-            });
-            canvasEl.addEventListener('wheel', (e) => {
-                e.preventDefault();
-                const zoomIntensity = 0.001;
-                const newScale = Math.max(0.1, imgTransform.scale + e.deltaY * -zoomIntensity * imgTransform.scale); // Zoom based on current scale
-                imgTransform.scale = newScale;
-                updateThumbnails();
-            }, { passive: false });
-        }
-
-        setupCanvasInteraction(canvasChi);
-        setupCanvasInteraction(canvasEn);
-
-
-        // Live Updates
-        [titleChi, titleEn, editEp, editCopyright, isSpinoff].forEach(el => {
-            el.addEventListener('input', updateThumbnails);
-            el.addEventListener('change', updateThumbnails); 
-        });
-
-        function updateThumbnails() {
-            if (!currentEditImage) return;
-            
-            if (isSpinoff.checked) {
-                editEp.disabled = true;
-                epInputGroup.style.opacity = '0.3';
-            } else {
-                editEp.disabled = false;
-                epInputGroup.style.opacity = '1';
-            }
-
-            drawSingleThumbnail(ctxChi, templates.chi, titleChi.value, 115, 660, 648, 'chi');
-            drawSingleThumbnail(ctxEn, templates.en, titleEn.value, 115, 660, 648, 'en');
-        }
-
-        function drawSingleThumbnail(ctx, template, titleText, x, bottomY, maxWidth, lang) {
-            const w = 1920;
-            const h = 1080;
-
-            // Clear with BLACK base (Fix for transparency)
-            ctx.fillStyle = "black";
-            ctx.fillRect(0, 0, w, h);
-
-            // 0. Smart Blur Fill (Background Layer)
-            // Draw a blurred, darkened, zoomed-in version of the image to fill gaps
-            ctx.save();
-            ctx.filter = 'blur(40px) brightness(0.6)';
-            // Draw image to cover canvas fully
-            const fillRatio = Math.max(w / currentEditImage.width, h / currentEditImage.height);
-            const fillW = currentEditImage.width * fillRatio;
-            const fillH = currentEditImage.height * fillRatio;
-            ctx.drawImage(currentEditImage, (w - fillW)/2, (h - fillH)/2, fillW, fillH);
-            ctx.restore();
-
-            // 1. Draw User Transformed Image
-            ctx.save();
-            // Move to center, apply transform, move back
-            ctx.translate(w/2 + imgTransform.x, h/2 + imgTransform.y);
-            ctx.scale(imgTransform.scale, imgTransform.scale);
-            ctx.drawImage(currentEditImage, -currentEditImage.width/2, -currentEditImage.height/2);
-            ctx.restore();
-
-            // 2. Template Overlay
-            if (template && template.complete) {
-                ctx.drawImage(template, 0, 0, w, h);
-            }
-
-            // 3. Text
-            if (titleText) {
-                ctx.fillStyle = "white";
-                // Stroke setup
-                ctx.strokeStyle = "black";
-                ctx.lineWidth = 4;
-
-                let fontSize;
-                let lineHeight;
-                let letterSpacing = "0px"; 
-                let fontFamily;
-                let fontWeight;
-
-                if (lang === 'en') {
-                    fontSize = 79; // 79pt
-                    lineHeight = 102; // 102pt
-                    fontFamily = canvasFontFamilyEn;
-                    fontWeight = 500;
-                } else {
-                    fontSize = 80; // 80pt
-                    lineHeight = 105; // Adjusted for 80pt
-                    letterSpacing = "0px"; 
-                    fontFamily = canvasFontFamilyChi;
-                    fontWeight = 700;
-                }
-                
-                ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
-                
-                // Using ctx.letterSpacing (Supported in Chrome 94+, Firefox 103+, Safari 15.4+)
-                if ('letterSpacing' in ctx) {
-                    ctx.letterSpacing = letterSpacing;
-                }
-                
-                ctx.textAlign = "left";
-                ctx.textBaseline = "bottom";
-                const lines = titleText.split('\n');
-                
-                for (let i = lines.length - 1; i >= 0; i--) {
-                    let yPos = bottomY - ((lines.length - 1 - i) * lineHeight);
-                    ctx.strokeText(lines[i], x, yPos); // Draw Stroke
-                    ctx.fillText(lines[i], x, yPos);   // Draw Fill
-                }
-                
-                // Reset letterSpacing
-                if ('letterSpacing' in ctx) {
-                    ctx.letterSpacing = "0px";
-                }
-            }
-
-            // 4. Badge Logic
-            let badgeText = "";
-            let badgeColor = "#ff7349"; 
-
-            if (isSpinoff.checked) {
-                badgeText = (lang === 'chi') ? "番外篇" : "SPIN-OFF";
-            } else if (editEp.value.trim()) {
-                badgeText = "EP" + editEp.value.trim();
-            }
-
-            if (badgeText) {
-                let badgeFont = canvasFontFamilyEn; 
-                if (isSpinoff.checked && lang === 'chi') {
-                    badgeFont = canvasFontFamilyChi;
-                }
-
-                ctx.font = `700 95px ${badgeFont}`; 
-                const textMetrics = ctx.measureText(badgeText);
-                
-                const paddingX = 35; 
-                const paddingY = 35; 
-                const fixedHeight = 137;
-                let badgeW = Math.max(255, textMetrics.width + (paddingX * 2));
-                
-                const rightMargin = 25; 
-                const badgeX = w - rightMargin - badgeW;
-                const badgeY = 20; 
-
-                ctx.fillStyle = "white";
-                roundRect(ctx, badgeX, badgeY, badgeW, fixedHeight, 32.5, true, false);
-
-                ctx.fillStyle = badgeColor;
-                ctx.textAlign = "center";
-                ctx.textBaseline = "alphabetic"; 
-
-                const badgeMetrics = ctx.measureText(badgeText);
-                const textY = badgeY + (fixedHeight / 2) + (badgeMetrics.actualBoundingBoxAscent - badgeMetrics.actualBoundingBoxDescent) / 2;
-                
-                ctx.fillText(badgeText, badgeX + (badgeW / 2), textY);
-            }
-
-            // 5. Copyright
-            if (editCopyright.value.trim()) {
-                ctx.save();
-                ctx.fillStyle = "rgba(255, 255, 255, 1.0)"; 
-                ctx.font = `bold 18px ${canvasFontFamilyChi}`; 
-                ctx.textAlign = "right";
-                ctx.textBaseline = "bottom";
-                ctx.shadowColor = "rgba(0, 0, 0, 0.8)";
-                ctx.shadowBlur = 50;
-                ctx.shadowOffsetX = 0;
-                ctx.shadowOffsetY = 0;
-                ctx.fillText(editCopyright.value.trim(), w - 30, h - 60);
-                ctx.restore();
-            }
-        }
-
-        function downloadLink(url, filename) {
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-        }
-
-        function downloadAll() {
-            const nameChi = `Cover_Chi_${(titleChi.value || 'Untitled').replace(/\n/g, '')}_EP${editEp.value}.jpg`;
-            downloadLink(canvasChi.toDataURL('image/jpeg', 0.95), nameChi);
-
-            setTimeout(() => {
-                const nameEn = `Cover_En_${(titleEn.value || 'Untitled').replace(/\n/g, '')}_EP${editEp.value}.jpg`;
-                downloadLink(canvasEn.toDataURL('image/jpeg', 0.95), nameEn);
-            }, 500); 
-        }
-
-        // --- Standard Helpers ---
-        function showMessage(msg, type = 'info') {
-            const container = document.getElementById('toastContainer');
-            const div = document.createElement('div');
-            let bgClass = type === 'error' ? 'bg-red-600' : type === 'success' ? 'bg-green-600' : type === 'warning' ? 'bg-yellow-600' : 'bg-blue-600';
-            div.className = `toast-notification ${bgClass} text-white px-4 py-2 rounded-lg shadow-lg mb-2 flex items-center gap-2 text-sm font-medium`;
-            div.innerHTML = `<span>${msg}</span>`;
-            container.appendChild(div);
-            setTimeout(() => { div.style.opacity = '0'; div.style.transform = 'translate(-50%, -20px)'; setTimeout(() => div.remove(), 300); }, 3000);
-        }
-
-        function secondsToHHMMSS(sec) {
-            sec = Number(sec);
-            const h = Math.floor(sec / 3600);
-            const m = Math.floor(sec % 3600 / 60);
-            const s = Math.floor(sec % 3600 % 60);
-            return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-        }
-
-        function parseHHMMSStoSeconds(str) {
-            const parts = str.split(':').map(part => parseFloat(part));
-            let seconds = 0;
-            if (parts.length === 3) seconds = parts[0] * 3600 + parts[1] * 60 + parts[2];
-            else if (parts.length === 2) seconds = parts[0] * 60 + parts[1];
-            else if (parts.length === 1) seconds = parts[0];
-            return isNaN(seconds) ? 0 : seconds;
-        }
-
-        function formatFilenameTime(seconds) { return new Date(seconds * 1000).toISOString().substr(11, 8).replace(/:/g, '-'); }
-        
-        function roundRect(ctx, x, y, width, height, radius, fill, stroke) { 
-            if (typeof stroke === 'undefined') stroke = true;
-            if (typeof radius === 'undefined') radius = 5;
-            if (typeof radius === 'number') radius = {tl: radius, tr: radius, br: radius, bl: radius};
-            else { var defaultRadius = {tl: 0, tr: 0, br: 0, bl: 0}; for (var side in defaultRadius) { radius[side] = radius[side] || defaultRadius[side]; } }
-            ctx.beginPath(); ctx.moveTo(x + radius.tl, y); ctx.lineTo(x + width - radius.tr, y); ctx.quadraticCurveTo(x + width, y, x + width, y + radius.tr); ctx.lineTo(x + width, y + height - radius.br); ctx.quadraticCurveTo(x + width, y + height, x + width - radius.br, y + height); ctx.lineTo(x + radius.bl, y + height); ctx.quadraticCurveTo(x, y + height, x, y + height - radius.bl); ctx.lineTo(x, y + radius.tl); ctx.quadraticCurveTo(x, y, x + radius.tl, y); ctx.closePath(); if (fill) ctx.fill(); if (stroke) ctx.stroke();
-        }
-
-        // --- Listeners ---
-        intervalRange.addEventListener('input', (e) => { intervalDisplay.innerText = parseFloat(e.target.value).toFixed(1); intervalInput.value = e.target.value; });
-        ['startTime', 'endTime'].forEach(id => {
-            const el = document.getElementById(id);
-            el.addEventListener('blur', () => { el.value = secondsToHHMMSS(parseHHMMSStoSeconds(el.value)); });
-            el.addEventListener('keydown', (e) => { if(e.key === 'Enter') el.blur(); });
-        });
-        videoInput.addEventListener('change', (e) => loadVideo(e.target.files[0]));
-        document.body.addEventListener('dragover', (e) => e.preventDefault());
-        document.body.addEventListener('drop', (e) => { e.preventDefault(); if (e.dataTransfer.files[0]) loadVideo(e.dataTransfer.files[0]); });
-
-        function loadVideo(file) {
-            const url = URL.createObjectURL(file);
-            video.src = url;
-            video.onloadedmetadata = () => {
-                const dur = secondsToHHMMSS(video.duration);
-                document.getElementById('videoDuration').innerText = dur;
-                document.getElementById('endTime').value = dur;
-                dropMessage.classList.add('hidden');
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                showMessage('影片載入成功', 'success');
-            };
-        }
-        function setCurrentTime(type) { document.getElementById(type === 'start' ? 'startTime' : 'endTime').value = secondsToHHMMSS(video.currentTime); }
-
-        // --- AI ---
-        async function loadSelectedModel() {
-            const type = modelSelect.value;
-            if (loadedModels[type]) return true;
-            modelStatus.innerText = "載入中..."; modelStatus.className = "text-[10px] text-yellow-500 animate-pulse";
-            try {
-                const path = 'https://justadudewhohacks.github.io/face-api.js/models';
-                if (type === 'ssd') await faceapi.nets.ssdMobilenetv1.loadFromUri(path);
-                else await faceapi.nets.tinyFaceDetector.loadFromUri(path);
-                loadedModels[type] = true;
-                modelStatus.innerText = "就緒"; modelStatus.className = "text-[10px] text-green-500 font-bold";
-                return true;
-            } catch (e) { console.error(e); modelStatus.innerText = "失敗"; modelStatus.className = "text-[10px] text-red-500"; showMessage("模型載入失敗", 'error'); aiToggle.checked = false; return false; }
-        }
-        aiToggle.addEventListener('change', async (e) => { if (e.target.checked) await loadSelectedModel(); else { modelStatus.innerText = "已停用"; modelStatus.className = "text-[10px] text-gray-500"; } });
-        modelSelect.addEventListener('change', async () => { if (aiToggle.checked) await loadSelectedModel(); });
-
-        // --- Capture ---
-        async function captureFrame(isAuto = false) {
-            if (!video.videoWidth) return;
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
-            const timestamp = video.currentTime;
-            const item = createGalleryItem(dataUrl, timestamp);
-            gallery.insertBefore(item, gallery.firstChild);
-            
-            if (isAuto && aiToggle.checked) {
-                const type = modelSelect.value;
-                if (!loadedModels[type]) await loadSelectedModel();
-                if (loadedModels[type]) {
-                    const badge = item.querySelector('.ai-status');
-                    badge.innerHTML = '⏳';
-                    const tempCanvas = document.createElement('canvas');
-                    tempCanvas.width = 320; tempCanvas.height = 240;
-                    tempCanvas.getContext('2d').drawImage(canvas, 0, 0, 320, 240);
-                    try {
-                        let detections = [];
-                        if (type === 'ssd') detections = await faceapi.detectAllFaces(tempCanvas, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.4 }));
-                        else detections = await faceapi.detectAllFaces(canvas, new faceapi.TinyFaceDetectorOptions({ scoreThreshold: 0.4 }));
-                        if (detections.length > 0) {
-                            badge.innerHTML = '👤'; badge.className = "ai-status absolute top-2 right-2 bg-green-500/90 text-white text-[10px] px-2 py-0.5 rounded-full font-bold shadow-lg z-10";
-                            item.classList.add('ring-2', 'ring-green-500');
-                        } else {
-                            badge.innerHTML = '❌'; badge.className = "ai-status absolute top-2 right-2 bg-gray-600/50 text-white text-[10px] px-2 py-0.5 rounded-full z-10 opacity-50";
-                            item.classList.add('no-face-dimmed');
-                        }
-                    } catch (e) { badge.innerHTML = '⚠️'; }
-                }
-            } else {
-                const badge = item.querySelector('.ai-status'); if(badge) badge.remove();
-            }
-        }
-
-        function createGalleryItem(dataUrl, timestamp) {
-            if (captureCount === 0) emptyState.classList.add('hidden');
-            captureCount++; countDisplay.innerText = captureCount;
-            const fileName = `Capture_${formatFilenameTime(timestamp)}.jpg`;
-            const div = document.createElement('div');
-            div.className = "gallery-item w-full bg-gray-700 rounded-lg overflow-hidden border border-gray-600 shadow-md flex flex-col animate-fadeIn transition-all duration-300";
-            div.innerHTML = `
-                <div class="relative w-full aspect-video bg-black group cursor-pointer overflow-hidden" onclick="viewImage('${dataUrl}')">
-                    <img src="${dataUrl}" class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105">
-                    <div class="ai-status absolute top-2 right-2 bg-blue-500/50 text-white text-[10px] px-2 py-0.5 rounded-full backdrop-blur-sm z-10 hidden">AI</div>
-                    <div class="absolute bottom-2 right-2 bg-black/70 text-white text-[10px] px-2 py-0.5 rounded font-mono border border-white/10 z-10">${secondsToHHMMSS(timestamp)}</div>
-                </div>
-                <div class="p-3 bg-gray-800 flex justify-between items-center border-t border-gray-700">
-                    <span class="text-xs text-gray-400 font-mono truncate mr-2 w-20">${fileName}</span>
-                    <div class="flex gap-1">
-                        <button onclick="openEditor('${dataUrl}')" class="text-yellow-400 hover:text-white hover:bg-yellow-600 p-1.5 rounded transition" title="製作封面"><span class="text-xs font-bold">🎨 製作封面</span></button>
-                        <a href="${dataUrl}" download="${fileName}" class="text-blue-400 hover:text-white hover:bg-blue-600 p-1.5 rounded transition" title="下載"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg></a>
-                    </div>
-                </div>`;
-            if(aiToggle.checked) div.querySelector('.ai-status').classList.remove('hidden');
-            return div;
-        }
-
-        function viewImage(url) {
-            const win = window.open();
-            win.document.write(`<body style="margin:0;background:#0f0f12;display:flex;justify-content:center;align-items:center;height:100vh;overflow:hidden;"><img src="${url}" style="max-width:95%;max-height:95%;box-shadow:0 0 50px rgba(0,0,0,0.8);border-radius:8px;border:1px solid #333;"></body>`);
-        }
-
-        let clearTimer;
-        function clearGallery() {
-            if (captureCount === 0) return;
-            const btn = document.getElementById('btnClear');
-            if (btn.getAttribute('data-confirm') !== 'true') {
-                btn.innerText = '確定刪除？'; btn.setAttribute('data-confirm', 'true'); btn.classList.add('bg-red-600', 'text-white'); btn.classList.remove('text-red-400', 'hover:bg-red-400/10');
-                clearTimer = setTimeout(() => { resetClearButton(btn); }, 3000); return;
-            }
-            const items = gallery.querySelectorAll('.gallery-item'); items.forEach(item => item.remove());
-            captureCount = 0; countDisplay.innerText = 0; emptyState.classList.remove('hidden');
-            showMessage('畫廊已清空', 'success'); resetClearButton(btn); if (clearTimer) clearTimeout(clearTimer);
-        }
-        function resetClearButton(btn) { btn.innerText = '清空'; btn.removeAttribute('data-confirm'); btn.classList.remove('bg-red-600', 'text-white'); btn.classList.add('text-red-400', 'hover:bg-red-400/10'); }
-
-        document.getElementById('btnManualCapture').addEventListener('click', () => { if (!video.src) { showMessage('請先載入影片！', 'warning'); return; } captureFrame(); });
-        const seekTo = (time) => new Promise(resolve => { const onSeeked = () => { video.removeEventListener('seeked', onSeeked); setTimeout(resolve, 150); }; video.addEventListener('seeked', onSeeked); video.currentTime = time; });
-        document.getElementById('btnAutoCapture').addEventListener('click', async () => {
-            if (!video.src) { showMessage('請先載入影片！', 'warning'); return; }
-            if (isAutoCapturing) return;
-            const start = parseHHMMSStoSeconds(document.getElementById('startTime').value);
-            const end = parseHHMMSStoSeconds(document.getElementById('endTime').value);
-            const interval = parseFloat(intervalInput.value);
-            if (start >= end) { showMessage('時間錯誤', 'error'); return; }
-            
-            if (aiToggle.checked) { const loaded = await loadSelectedModel(); if (!loaded) return; }
-
-            isAutoCapturing = true; const btn = document.getElementById('btnAutoCapture'); const originalHTML = btn.innerHTML;
-            btn.innerHTML = `停止`; btn.classList.replace('bg-emerald-600', 'bg-red-600'); video.pause(); showMessage('開始截圖...', 'info');
-            try {
-                for (let t = start; t <= end; t += interval) { await seekTo(t); await captureFrame(true); document.getElementById('galleryContainer').scrollTop = 0; }
-            } catch (err) { console.error(err); } 
-            finally { isAutoCapturing = false; btn.innerHTML = originalHTML; btn.classList.replace('bg-red-600', 'bg-emerald-600'); showMessage('截圖完成', 'success'); }
-        });
-
-        const style = document.createElement('style');
-        style.innerHTML = `@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } } .animate-fadeIn { animation: fadeIn 0.3s ease-out forwards; }`;
-        document.head.appendChild(style);
-    </script>
+    <script src="js/highlight.js"></script>
 </body>
+
 </html>
