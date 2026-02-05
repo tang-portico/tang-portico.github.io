@@ -21,14 +21,14 @@ let globalSettings = {
         logoBottom: 0,
         gradHeight: 20, // Default
         gradOpacity: 0.6, // Default
-        fontSize: 1.0 // New Default
+        fontSize: 1.5 // Default
     },
     portrait: {
         logoScale: 80, // Default
         logoBottom: 2, // Default
         gradHeight: 20, // Default
         gradOpacity: 0.6, // Default
-        fontSize: 1.0 // New Default
+        fontSize: 1.5 // Default
     }
 };
 
@@ -185,6 +185,8 @@ updateSidebarInputs();
 
 els.copyright.addEventListener('input', (e) => {
     globalSettings.common.copyrightText = e.target.value;
+    // Save immediately when copyright text is updated
+    saveSettings();
     redrawAllCanvases();
 });
 
@@ -204,7 +206,12 @@ if (els.itemTextColor) {
         if (item) {
             if (!item.textStyle) item.textStyle = { color: '#ffffff', shadow: true };
             item.textStyle.color = e.target.value;
-            redrawCanvas(item);
+            // Find and redraw the canvas for this specific item
+            const canvas = els.editorContainer.querySelector(`canvas[data-item-id="${item.id}"]`);
+            if (canvas) {
+                const source = state.sourceImages.find(s => s.id === item.sourceId);
+                if (source) drawCanvas(canvas, item, source, 0.25);
+            }
         }
     });
 }
@@ -217,7 +224,12 @@ if (els.itemTextShadow) {
         if (item) {
             if (!item.textStyle) item.textStyle = { color: '#ffffff', shadow: true };
             item.textStyle.shadow = e.target.checked;
-            redrawCanvas(item);
+            // Find and redraw the canvas for this specific item
+            const canvas = els.editorContainer.querySelector(`canvas[data-item-id="${item.id}"]`);
+            if (canvas) {
+                const source = state.sourceImages.find(s => s.id === item.sourceId);
+                if (source) drawCanvas(canvas, item, source, 0.25);
+            }
         }
     });
 }
@@ -227,7 +239,9 @@ Object.keys(independentInputs).forEach(domId => {
     const settingKey = independentInputs[domId];
     el.addEventListener('input', (e) => {
         globalSettings[state.mode][settingKey] = e.target.value;
-        const valDisplay = document.getElementById(domId + 'Val');
+        // Special case: fontSizeScale's display element is fontSizeVal (not fontSizeScaleVal)
+        const valDisplayId = domId === 'fontSizeScale' ? 'fontSizeVal' : domId + 'Val';
+        const valDisplay = document.getElementById(valDisplayId);
         if (valDisplay) {
             let suffix = (settingKey === 'gradOpacity' || settingKey === 'fontSize') ? '' : '%';
             valDisplay.innerText = e.target.value + suffix;
@@ -786,7 +800,39 @@ function drawCanvas(canvas, item, source, scaleFactor) {
         ctx.drawImage(currentLogo, logoX, logoY, drawLogoW, drawLogoH);
     }
 
-    if (sharedText) {
+
+    // Official Mode: Render per-item text with custom color/shadow
+    if (state.usageMode === 'official') {
+        const copyrightText = globalSettings.common.copyrightText;
+        if (copyrightText) {
+            // Initialize textStyle if missing
+            if (!item.textStyle) item.textStyle = { color: '#ffffff', shadow: true };
+
+            const fontSizeBase = targetH * 0.012;
+            const fontSize = fontSizeBase * parseFloat(settings.fontSize);
+            ctx.font = `${fontSize}px "Helvetica Neue", Arial, sans-serif`;
+            ctx.fillStyle = item.textStyle.color;
+            ctx.textAlign = "right";
+            ctx.textBaseline = "bottom";
+
+            if (item.textStyle.shadow) {
+                ctx.shadowColor = "rgba(0,0,0,0.8)";
+                ctx.shadowBlur = 2;
+                ctx.shadowOffsetX = 1;
+                ctx.shadowOffsetY = 1;
+            } else {
+                ctx.shadowColor = "transparent";
+                ctx.shadowBlur = 0;
+                ctx.shadowOffsetX = 0;
+                ctx.shadowOffsetY = 0;
+            }
+
+            const marginX = targetW * 0.02;
+            const marginY = targetH * 0.015;
+            ctx.fillText(copyrightText, targetW - marginX, targetH - marginY);
+        }
+    } else if (sharedText) {
+        // Social Mode: Shared copyright text
         const fontSizeBase = targetH * 0.012;
         const fontSize = fontSizeBase * parseFloat(settings.fontSize);
         ctx.font = `${fontSize}px "Helvetica Neue", Arial, sans-serif`;
@@ -796,6 +842,7 @@ function drawCanvas(canvas, item, source, scaleFactor) {
         const marginX = targetW * 0.02; const marginY = targetH * 0.015;
         ctx.fillText(sharedText, targetW - marginX, targetH - marginY);
     }
+
 }
 
 function loadImage(file) {
@@ -840,7 +887,6 @@ els.dlBtn.addEventListener('click', () => {
     }
 
     els.loading.style.display = 'flex';
-    els.progressSub.innerText = "正在產生全語言與尺寸檔案...";
 
     const zip = new JSZip();
     const sName = els.seriesName.value.trim();
@@ -852,6 +898,80 @@ els.dlBtn.addEventListener('click', () => {
     }
 
     const prefixInput = (sName && epNum) ? `${sName}_${epNum}` : (sName || epNum);
+
+    // Official Mode: Only landscape, no language variants, no subfolders
+    if (state.usageMode === 'official') {
+        els.progressSub.innerText = "正在產生官網專用檔案...";
+
+        const list = itemsToDownload.landscape;
+        if (list.length === 0) {
+            alert("目前沒有橫式劇照可供下載");
+            els.loading.style.display = 'none';
+            return;
+        }
+
+        (async () => {
+            try {
+                // Set to landscape mode for rendering
+                state.mode = 'landscape';
+
+                for (let i = 0; i < list.length; i++) {
+                    const item = list[i];
+                    const source = state.sourceImages.find(s => s.id === item.sourceId);
+
+                    els.progress.innerText = `正在處理 ${i + 1}/${list.length} (${Math.round((i + 1) / list.length * 100)}%)`;
+
+                    const canvas = drawHighRes(item, 'landscape');
+                    const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.95));
+
+                    let filename;
+                    if (prefixInput) {
+                        const seq = (i + 1).toString().padStart(3, '0');
+                        filename = `${prefixInput}_${seq}.jpg`;
+                    } else {
+                        // Find siblings to determine version suffix
+                        const siblings = list.filter(it => {
+                            const s = state.sourceImages.find(src => src.id === it.sourceId);
+                            return s.file.name === source.file.name;
+                        });
+
+                        let copySuffix = "";
+                        if (siblings.length > 1) {
+                            const copyIndex = siblings.indexOf(item) + 1;
+                            copySuffix = `_v${copyIndex}`;
+                        }
+                        filename = source.file.name.replace(/\.[^/.]+$/, "") + copySuffix + ".jpg";
+                    }
+
+                    // Add directly to zip root, no subfolder
+                    zip.file(filename, blob);
+                }
+
+                els.progress.innerText = "打包壓縮中...";
+                const zipName = prefixInput ? `${prefixInput}_Official.zip` : `Official_Stills.zip`;
+                const content = await zip.generateAsync({ type: "blob" });
+                saveAs(content, zipName);
+
+            } catch (err) {
+                console.error(err);
+                alert("下載過程發生錯誤: " + err.message);
+            } finally {
+                // Restore Original State
+                state.mode = originalMode;
+                state.previewLang = originalLang;
+                state.activeItemId = activeId;
+                els.loading.style.display = 'none';
+
+                // Force re-render to restore UI appearance
+                updateUI();
+                renderGrid();
+            }
+        })();
+        return;
+    }
+
+    // Social Mode: Full multi-language, multi-orientation export
+    els.progressSub.innerText = "正在產生全語言與尺寸檔案...";
 
     // Languages to generate
     const languages = ['cn', 'en'];
@@ -1011,6 +1131,7 @@ function saveSeriesHistory(name) {
 function loadSettings() {
     const key = getStorageKey();
     const raw = localStorage.getItem(key);
+    const hasSeriesName = els.seriesName.value.trim() !== '';
 
     if (raw) {
         try {
@@ -1019,7 +1140,10 @@ function loadSettings() {
             // 1. Restore Global Settings
             // Merge carefully to avoid obliterating structure if we add new keys later
             if (data.globalSettings) {
-                globalSettings.common = { ...globalSettings.common, ...data.globalSettings.common };
+                // Only restore copyright text if we have a series name
+                if (hasSeriesName && data.globalSettings.common) {
+                    globalSettings.common = { ...globalSettings.common, ...data.globalSettings.common };
+                }
                 globalSettings.landscape = { ...globalSettings.landscape, ...data.globalSettings.landscape };
                 globalSettings.portrait = { ...globalSettings.portrait, ...data.globalSettings.portrait };
             }
