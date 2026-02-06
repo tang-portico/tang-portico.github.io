@@ -581,7 +581,8 @@ function renderGrid() {
         const colorBtn = document.createElement('div');
         colorBtn.className = 'color-btn';
         colorBtn.innerHTML = `🎨 調色`;
-        colorBtn.onclick = () => {
+        colorBtn.onclick = (e) => {
+            e.stopPropagation();
             const panel = controls.querySelector('.filter-panel');
             panel.classList.toggle('show');
             colorBtn.classList.toggle('active');
