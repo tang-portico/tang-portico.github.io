@@ -1018,25 +1018,12 @@ els.dlBtn.addEventListener('click', () => {
                         const canvas = drawHighRes(item, mode);
                         const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.95));
 
+                        const seq = (i + 1).toString().padStart(3, '0');
                         let filename;
                         if (prefixInput) {
-                            const seq = (i + 1).toString().padStart(3, '0');
                             filename = `${prefixInput}_${modePrefix}_${langStr}_${seq}.jpg`;
                         } else {
-                            // Find siblings in THIS list to determine version suffix
-                            const siblings = list.filter(it => {
-                                const s = state.sourceImages.find(src => src.id === it.sourceId);
-                                return s.file.name === source.file.name;
-                            });
-
-                            let copySuffix = "";
-                            if (siblings.length > 1) {
-                                const copyIndex = siblings.indexOf(item) + 1;
-                                copySuffix = `_v${copyIndex}`;
-                            }
-                            // Filename matches mode suffix convention
-                            const suffix = mode === 'landscape' ? '_1920x1080' : '_1080x1350';
-                            filename = source.file.name.replace(/\.[^/.]+$/, "") + copySuffix + suffix + ".jpg";
+                            filename = `${modePrefix}_${langStr}_${seq}.jpg`;
                         }
 
                         folder.file(filename, blob);
