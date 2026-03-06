@@ -317,22 +317,34 @@ header {
     background: #f9fafb;
 }
 
-/* Jspreadsheet Pagination Bounds Fix */
-.jexcel_container {
-    height: 100% !important;
+/* Jspreadsheet V5 Layout Fixes */
+.jtabs-content,
+.jtabs-selected,
+.jss_container {
     display: flex !important;
     flex-direction: column !important;
+    flex: 1 !important;
+    min-height: 0 !important;
+    height: 100% !important;
 }
 
-.jexcel_content {
-    flex-grow: 1 !important;
-    height: auto !important;
-    max-height: none !important;
+.jss_content {
+    flex: 1 1 0% !important;
     overflow: auto !important;
+    height: auto !important;
 }
 
-.jexcel_pagination {
+.jss_pagination {
     flex-shrink: 0 !important;
+    background: white !important;
+    border-top: 1px solid #e5e7eb !important;
+    padding: 8px !important;
+}
+
+.jss_filter {
+    flex-shrink: 0 !important;
+    padding: 10px !important;
+    background: #f9f9f9 !important;
 }
 
 .modal-overlay {

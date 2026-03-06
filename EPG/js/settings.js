@@ -11,7 +11,7 @@ let currentGrid = null;
 async function loadAndRenderDictionary(channelId) {
     if (!channelId) {
         if (currentGrid) {
-            currentGrid.destroy();
+            jspreadsheet.destroy(spreadsheetContainer);
             currentGrid = null;
         }
         statusText.innerText = "請先選擇頻道以載入字典。";
@@ -62,7 +62,8 @@ async function loadAndRenderDictionary(channelId) {
 // Render the Jspreadsheet
 function renderSpreadsheet(rawData) {
     if (currentGrid) {
-        currentGrid.destroy();
+        jspreadsheet.destroy(spreadsheetContainer);
+        currentGrid = null;
         spreadsheetContainer.innerHTML = '';
     }
 
