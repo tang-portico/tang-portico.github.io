@@ -213,6 +213,62 @@ function exportExcel(data, filename) {
     XLSX.writeFile(wb, filename);
 }
 
+// Dictionary Persistence
+function parseDictionaryData(data, isFromStorage = false) {
+    dictionary = new Map();
+    let validRows = 0;
+
+    data.forEach((row, index) => {
+        const enTitleRaw = row['節目英文名稱資料庫'] || row['節目英文名稱'];
+        if (enTitleRaw) {
+            const enTitle = String(enTitleRaw).trim().toLowerCase();
+            dictionary.set(enTitle, {
+                enTitleOriginal: String(enTitleRaw).trim(),
+                zhTitle: getSafeString(row['節目中文譯名資料庫'] || row['節目中文譯名']),
+                category: getSafeString(row['分類']),
+                rating: getSafeString(row['節目分級'])
+            });
+            validRows++;
+        }
+    });
+
+    if (validRows > 0) {
+        if (isFromStorage) {
+            statusDict.innerText = `✅ 已從瀏覽器記憶載入字典 (${validRows} 筆資料)`;
+            dropDict.querySelector('.text-content h3').innerText = '更新中文譯名資料庫';
+            dropDict.querySelector('.drag-text').innerText = '拖曳新字典檔可覆蓋現有記憶';
+        } else {
+            statusDict.innerText = `✅ 成功載入並記憶字典 (${validRows} 筆資料)`;
+            // Save to localStorage
+            try {
+                localStorage.setItem('epg_dict_raw', JSON.stringify(data));
+            } catch (e) {
+                console.error("Storage save failed", e);
+            }
+        }
+
+        // Enable Step 1
+        document.getElementById('section-step1').classList.remove('disabled');
+        fileStep1.disabled = false;
+    } else {
+        if (!isFromStorage) {
+            statusDict.innerText = `🔴 未找到有效資料。請確認欄位名稱。`;
+        }
+    }
+}
+
+function loadDictionaryFromStorage() {
+    try {
+        const stored = localStorage.getItem('epg_dict_raw');
+        if (stored) {
+            const data = JSON.parse(stored);
+            parseDictionaryData(data, true);
+        }
+    } catch (e) {
+        console.error("Failed to load dict from storage", e);
+    }
+}
+
 // Setup dict upload
 fileDict.addEventListener('change', (e) => {
     const file = e.target.files[0];
@@ -224,34 +280,12 @@ fileDict.addEventListener('change', (e) => {
             statusDict.innerHTML = `<span class="status-error">🔴 讀取失敗: ${err.message}</span>`;
             return;
         }
-
-        dictionary = new Map();
-        let validRows = 0;
-
-        data.forEach((row, index) => {
-            const enTitleRaw = row['節目英文名稱資料庫'] || row['節目英文名稱'];
-            if (enTitleRaw) {
-                const enTitle = String(enTitleRaw).trim().toLowerCase();
-                dictionary.set(enTitle, {
-                    enTitleOriginal: String(enTitleRaw).trim(),
-                    zhTitle: getSafeString(row['節目中文譯名資料庫'] || row['節目中文譯名']),
-                    category: getSafeString(row['分類']),
-                    rating: getSafeString(row['節目分級'])
-                });
-                validRows++;
-            }
-        });
-
-        if (validRows > 0) {
-            statusDict.innerText = `成功載入字典 (${validRows} 筆資料)`;
-            // Enable Step 1
-            document.getElementById('section-step1').classList.remove('disabled');
-            fileStep1.disabled = false;
-        } else {
-            statusDict.innerText = `🔴 未找到有效資料。請確認欄位名稱。`;
-        }
+        parseDictionaryData(data, false);
     });
 });
+
+// Auto-load on startup
+loadDictionaryFromStorage();
 
 // Process Step 1 Core Logic
 function processStep1Data(data, logElem) {
