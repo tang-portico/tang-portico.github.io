@@ -5,7 +5,7 @@ let step2Data = null;
 
 // DOM Elements
 const dropDict = document.getElementById('section-dict');
-const fileDict = document.getElementById('file-dict');
+const channelSelect = document.getElementById('channel-select');
 const statusDict = document.getElementById('status-dict');
 
 const sectionStep1 = document.getElementById('section-step1');
@@ -57,24 +57,38 @@ function clearLog(logArea) {
 }
 
 // Utility functions
-function readExcelFile(file, callback) {
-    const reader = new FileReader();
-    reader.onload = (e) => {
+function readExcelFile(fileOrBuffer, callback) {
+    if (fileOrBuffer instanceof File || fileOrBuffer instanceof Blob) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array', cellDates: true, dateNF: 'yyyy-mm-dd' });
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                // header: 1 means getting a 2D array of raw values
+                // but for easier object-based processing, we use default or raw
+                const json = XLSX.utils.sheet_to_json(worksheet, { raw: false, dateNF: 'yyyy-mm-dd' });
+                callback(null, json);
+            } catch (error) {
+                callback(error, null);
+            }
+        };
+        reader.onerror = (error) => callback(error, null);
+        reader.readAsArrayBuffer(fileOrBuffer);
+    } else {
+        // Assume ArrayBuffer from fetch
         try {
-            const data = new Uint8Array(e.target.result);
+            const data = new Uint8Array(fileOrBuffer);
             const workbook = XLSX.read(data, { type: 'array', cellDates: true, dateNF: 'yyyy-mm-dd' });
             const firstSheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[firstSheetName];
-            // header: 1 means getting a 2D array of raw values
-            // but for easier object-based processing, we use default or raw
             const json = XLSX.utils.sheet_to_json(worksheet, { raw: false, dateNF: 'yyyy-mm-dd' });
             callback(null, json);
         } catch (error) {
             callback(error, null);
         }
-    };
-    reader.onerror = (error) => callback(error, null);
-    reader.readAsArrayBuffer(file);
+    }
 }
 
 function getSafeString(val) {
@@ -213,9 +227,12 @@ function exportExcel(data, filename) {
     XLSX.writeFile(wb, filename);
 }
 
-// Dictionary Persistence
-function parseDictionaryData(data, isFromStorage = false) {
+// Dictionary Persistence & Loading
+let rawDictList = [];
+
+function parseDictionaryData(data, channelId, isFromStorage = false) {
     dictionary = new Map();
+    rawDictList = data;
     let validRows = 0;
 
     data.forEach((row, index) => {
@@ -234,14 +251,12 @@ function parseDictionaryData(data, isFromStorage = false) {
 
     if (validRows > 0) {
         if (isFromStorage) {
-            statusDict.innerText = `✅ 已從瀏覽器記憶載入字典 (${validRows} 筆資料)`;
-            dropDict.querySelector('.text-content h3').innerText = '更新中文譯名資料庫';
-            dropDict.querySelector('.drag-text').innerText = '拖曳新字典檔可覆蓋現有記憶';
+            statusDict.innerText = `✅ 已從快取載入字典 (${validRows} 筆資料)`;
         } else {
-            statusDict.innerText = `✅ 成功載入並記憶字典 (${validRows} 筆資料)`;
+            statusDict.innerText = `✅ 成功載入字典 (${validRows} 筆資料)`;
             // Save to localStorage
             try {
-                localStorage.setItem('epg_dict_raw', JSON.stringify(data));
+                localStorage.setItem(`epg_dict_${channelId}`, JSON.stringify(data));
             } catch (e) {
                 console.error("Storage save failed", e);
             }
@@ -251,41 +266,66 @@ function parseDictionaryData(data, isFromStorage = false) {
         document.getElementById('section-step1').classList.remove('disabled');
         fileStep1.disabled = false;
     } else {
-        if (!isFromStorage) {
-            statusDict.innerText = `🔴 未找到有效資料。請確認欄位名稱。`;
-        }
+        statusDict.innerText = `🔴 未找到有效資料。請確認欄位名稱。`;
     }
 }
 
-function loadDictionaryFromStorage() {
+async function loadDictionaryForChannel(channelId) {
+    if (!channelId) {
+        statusDict.innerText = '請選擇欲轉換的頻道';
+        document.getElementById('section-step1').classList.add('disabled');
+        fileStep1.disabled = true;
+        dictionary = null;
+        return;
+    }
+
+    statusDict.innerText = '⏳ 正在載入字典...';
+
+    // 1. Try Cache First
     try {
-        const stored = localStorage.getItem('epg_dict_raw');
+        const stored = localStorage.getItem(`epg_dict_${channelId}`);
         if (stored) {
             const data = JSON.parse(stored);
-            parseDictionaryData(data, true);
+            parseDictionaryData(data, channelId, true);
+            return; // Exit early if cache succeeds
         }
     } catch (e) {
-        console.error("Failed to load dict from storage", e);
+        console.warn("Cache read failed, fetching from server...");
+    }
+
+    // 2. Fetch from GitHub Pages / static assets
+    try {
+        const response = await fetch(`assets/dict/${channelId}.xlsx`);
+        if (!response.ok) {
+            throw new Error(`伺服器找不到該頻道字典 (${response.status})`);
+        }
+        const arrayBuffer = await response.arrayBuffer();
+
+        readExcelFile(arrayBuffer, (err, data) => {
+            if (err) {
+                statusDict.innerHTML = `<span class="status-error">🔴 字典解析失敗: ${err.message}</span>`;
+                return;
+            }
+            parseDictionaryData(data, channelId, false);
+        });
+
+    } catch (e) {
+        statusDict.innerHTML = `<span class="status-error">🔴 下載字典失敗: ${e.message}</span>`;
     }
 }
 
-// Setup dict upload
-fileDict.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    dropDict.querySelector('.drag-text').innerText = file.name;
-
-    readExcelFile(file, (err, data) => {
-        if (err) {
-            statusDict.innerHTML = `<span class="status-error">🔴 讀取失敗: ${err.message}</span>`;
-            return;
-        }
-        parseDictionaryData(data, false);
-    });
+// Setup channel dropdown
+channelSelect.addEventListener('change', (e) => {
+    const channelId = e.target.value;
+    loadDictionaryForChannel(channelId);
 });
 
-// Auto-load on startup
-loadDictionaryFromStorage();
+// Auto-load if previously selected
+window.addEventListener('DOMContentLoaded', () => {
+    if (channelSelect.value) {
+        loadDictionaryForChannel(channelSelect.value);
+    }
+});
 
 // Process Step 1 Core Logic
 function processStep1Data(data, logElem) {
@@ -581,3 +621,99 @@ function parseDateTime(dateStr, timeStr) {
     const d = new Date(`${dateStr}T${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}:00`);
     return d;
 }
+
+// ==========================================
+// Settings Modal & Jspreadsheet Logic
+// ==========================================
+const btnSettings = document.getElementById('btn-settings');
+const settingsModal = document.getElementById('settings-modal');
+const btnCloseSettings = document.getElementById('btn-close-settings');
+const btnCancelSettings = document.getElementById('btn-cancel-settings');
+const btnSaveSettings = document.getElementById('btn-save-settings');
+const btnResetDict = document.getElementById('btn-reset-dict');
+const spreadsheetContainer = document.getElementById('spreadsheet-container');
+
+function closeSettings() {
+    settingsModal.classList.add('hidden');
+    if (window.mySpreadsheet) {
+        window.mySpreadsheet.destroy();
+        window.mySpreadsheet = null;
+    }
+}
+
+btnSettings.addEventListener('click', () => {
+    const channelId = channelSelect.value;
+    if (!channelId) {
+        alert("請先選擇頻道！");
+        return;
+    }
+
+    document.getElementById('current-edit-channel').innerText = channelSelect.options[channelSelect.selectedIndex].text;
+    settingsModal.classList.remove('hidden');
+
+    const validData = Array.isArray(rawDictList) ? rawDictList : [];
+
+    // Prepare data for Jspreadsheet
+    const tableData = validData.map(row => [
+        row['節目英文名稱資料庫'] || row['節目英文名稱'] || '',
+        row['節目中文譯名資料庫'] || row['節目中文譯名'] || '',
+        row['分類'] || '',
+        row['節目分級'] || ''
+    ]);
+
+    // Ensure at least some empty rows for editing
+    while (tableData.length < 100) {
+        tableData.push(['', '', '', '']);
+    }
+
+    spreadsheetContainer.innerHTML = '';
+    window.mySpreadsheet = jspreadsheet(spreadsheetContainer, {
+        data: tableData,
+        columns: [
+            { type: 'text', title: '英文片名 (比對金鑰)', width: 300 },
+            { type: 'text', title: '中文片名', width: 300 },
+            { type: 'text', title: '分類', width: 120 },
+            { type: 'text', title: '節目分級', width: 100 }
+        ],
+        search: true,
+        pagination: 50,
+        tableOverflow: true,
+        tableWidth: "100%",
+        tableHeight: "100%"
+    });
+});
+
+btnCloseSettings.addEventListener('click', closeSettings);
+btnCancelSettings.addEventListener('click', closeSettings);
+
+btnSaveSettings.addEventListener('click', () => {
+    if (!window.mySpreadsheet) return;
+    const data = window.mySpreadsheet.getData();
+
+    const newRawDictList = data.map(row => ({
+        '節目英文名稱資料庫': String(row[0]).trim(),
+        '節目中文譯名資料庫': String(row[1]).trim(),
+        '分類': String(row[2]).trim(),
+        '節目分級': String(row[3]).trim()
+    })).filter(row => row['節目英文名稱資料庫'] !== '');
+
+    if (newRawDictList.length === 0) {
+        alert("字典不能為空！");
+        return;
+    }
+
+    const channelId = channelSelect.value;
+    parseDictionaryData(newRawDictList, channelId, false);
+
+    closeSettings();
+    alert("✅ 設定已儲存並更新您的瀏覽器記憶！");
+});
+
+btnResetDict.addEventListener('click', () => {
+    if (confirm("確定要刪除自訂記憶，重新從伺服器還原為預設字典嗎？")) {
+        const channelId = channelSelect.value;
+        localStorage.removeItem(`epg_dict_${channelId}`);
+        closeSettings();
+        loadDictionaryForChannel(channelId);
+    }
+});

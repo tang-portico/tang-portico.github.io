@@ -9,6 +9,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- SheetJS for Excel processing -->
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <!-- Jspreadsheet CE for in-browser Excel editor -->
+    <script src="https://cdn.jsdelivr.net/npm/jspreadsheet-ce/dist/jspreadsheet.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsuites/dist/jsuites.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jspreadsheet-ce/dist/jspreadsheet.min.css"
+        type="text/css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jsuites/dist/jsuites.min.css" type="text/css" />
 </head>
 
 <body>
@@ -17,26 +23,34 @@
             <div class="logo-area">
                 <img src="assets/PorticoMedia-Logo.svg" alt="Portico Media 杰德影音"
                     style="height: 60px; width: auto; display: block;">
-            </div>
-            <div class="title-area">
-                <h2>頻道EPG轉檔工具 <span class="badge">beta</span></h2>
-            </div>
+                <div class="title-area">
+                    <h2>頻道EPG轉檔工具 <span class="badge">beta</span></h2>
+                </div>
+                <div class="header-actions" style="margin-left: auto;">
+                    <button id="btn-settings" class="settings-btn" title="設定與更新字典">⚙️ 設定</button>
+                </div>
         </header>
 
         <main class="main-layout">
             <!-- Left Column: Upload Zones -->
             <div class="column-left">
-                <!-- Dictionary Upload Section (Orange) -->
-                <section class="upload-zone zone-orange" id="section-dict">
+                <!-- Dictionary Select Section (Orange) -->
+                <section class="upload-zone zone-orange dropdown-zone" id="section-dict">
                     <div class="upload-content">
-                        <div class="icon-circle">+</div>
+                        <div class="icon-circle">📺</div>
                         <div class="text-content">
-                            <h3>載入節目中文譯名資料庫</h3>
-                            <p id="status-dict">請先上傳最新的翻譯資料庫</p>
+                            <h3>選擇頻道譯名資料庫</h3>
+                            <p id="status-dict">請選擇欲轉換的頻道</p>
                         </div>
                     </div>
-                    <div class="drag-text">拖曳檔案至此或點擊上傳</div>
-                    <input type="file" id="file-dict" accept=".xlsx, .xls" class="file-input">
+
+                    <div class="select-container">
+                        <select id="channel-select" class="channel-dropdown">
+                            <option value="">-- 請選擇頻道 --</option>
+                            <option value="ROCK_Entertainment">ROCK Entertainment</option>
+                            <!-- Add the other 17 channels here later -->
+                        </select>
+                    </div>
                 </section>
 
                 <!-- Step 1 to Step 2 Section (Blue) -->
@@ -66,6 +80,40 @@
             </div>
         </main>
     </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>⚙️ 系統設定 & 更新字典</h3>
+                <button id="btn-close-settings" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body"
+                style="display: flex; flex-direction: column; gap: 1rem; flex: 1; overflow: hidden;">
+                <div class="setting-item"
+                    style="flex: 1; display: flex; flex-direction: column; overflow: hidden; margin-bottom: 0;">
+                    <h4>編輯 <span id="current-edit-channel" style="color: var(--blue-color);"></span> 的譯名資料庫</h4>
+                    <p style="font-size: 0.9rem; color: #666; margin-bottom: 1rem; flex-shrink: 0;">
+                        您可以直接像操作 Excel 一樣編輯下方的表格。支援複製貼上功能。<br>
+                        編輯完成後點擊「儲存記憶」即可將新結果存入瀏覽器快取。
+                    </p>
+
+                    <div id="spreadsheet-container"
+                        style="flex: 1; overflow: auto; border: 1px solid #e5e7eb; border-radius: 8px;"></div>
+                </div>
+
+                <div
+                    style="display: flex; justify-content: flex-end; gap: 1rem; flex-shrink: 0; padding-top: 1rem; border-top: 1px solid #f3f4f6;">
+                    <button id="btn-reset-dict" class="settings-btn"
+                        style="color: #ef4444; border-color: #fca5a5; margin-right: auto;">還原預設字典</button>
+                    <button id="btn-cancel-settings" class="settings-btn">取消</button>
+                    <button id="btn-save-settings" class="settings-btn"
+                        style="background: var(--blue-color); color: white; border-color: var(--blue-color);">儲存記憶</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="js/app.js"></script>
 </body>
 

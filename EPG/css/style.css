@@ -264,3 +264,125 @@ header {
 .log-item.warn {
     color: #d97706;
 }
+
+/* Dropdown */
+.dropdown-zone {
+    cursor: default;
+}
+
+.dropdown-zone:hover {
+    filter: none;
+}
+
+.select-container {
+    width: 100%;
+}
+
+.channel-dropdown {
+    width: 100%;
+    padding: 0.8rem 1rem;
+    font-size: 1.1rem;
+    border-radius: 12px;
+    border: 2px solid rgba(255, 255, 255, 0.8);
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    cursor: pointer;
+    outline: none;
+    font-weight: 600;
+}
+
+.channel-dropdown option {
+    background: white;
+    color: var(--text-main);
+}
+
+.channel-dropdown:focus {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* Settings Modal */
+.settings-btn {
+    background: white;
+    border: 2px solid #e5e7eb;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.95rem;
+}
+
+.settings-btn:hover {
+    border-color: #d1d5db;
+    background: #f9fafb;
+}
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    opacity: 1;
+    transition: opacity 0.2s;
+}
+
+.modal-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 500px;
+    padding: 2rem;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    transform: translateY(0);
+    transition: transform 0.2s;
+}
+
+.modal-overlay.hidden .modal-content {
+    transform: translateY(-20px);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #9ca3af;
+}
+
+.close-btn:hover {
+    color: #4b5563;
+}
+
+.setting-item {
+    margin-bottom: 1rem;
+}
+
+.setting-item h4 {
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+    font-size: 1rem;
+    color: #374151;
+}
