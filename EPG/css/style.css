@@ -317,6 +317,24 @@ header {
     background: #f9fafb;
 }
 
+/* Jspreadsheet Pagination Bounds Fix */
+.jexcel_container {
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+.jexcel_content {
+    flex-grow: 1 !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: auto !important;
+}
+
+.jexcel_pagination {
+    flex-shrink: 0 !important;
+}
+
 .modal-overlay {
     position: fixed;
     top: 0;
