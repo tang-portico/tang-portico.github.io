@@ -251,15 +251,10 @@ function parseDictionaryData(data, channelId, isFromStorage = false) {
 
     if (validRows > 0) {
         if (isFromStorage) {
-            statusDict.innerText = `✅ 已從快取載入字典 (${validRows} 筆資料)`;
+            statusDict.innerText = `✅ 已從雲端資料庫載入字典 (${validRows} 筆資料)`;
         } else {
-            statusDict.innerText = `✅ 成功載入字典 (${validRows} 筆資料)`;
-            // Save to localStorage
-            try {
-                localStorage.setItem(`epg_dict_${channelId}`, JSON.stringify(data));
-            } catch (e) {
-                console.error("Storage save failed", e);
-            }
+            statusDict.innerText = `✅ 成功載入初始字典 (${validRows} 筆資料)`;
+            // Wait to let caller save it if needed
         }
 
         // Enable Step 1
@@ -279,38 +274,48 @@ async function loadDictionaryForChannel(channelId) {
         return;
     }
 
-    statusDict.innerText = '⏳ 正在載入字典...';
+    statusDict.innerText = '⏳ 正在連線至雲端資料庫載入字典...';
 
-    // 1. Try Cache First
     try {
-        const stored = localStorage.getItem(`epg_dict_${channelId}`);
-        if (stored) {
-            const data = JSON.parse(stored);
-            parseDictionaryData(data, channelId, true);
-            return; // Exit early if cache succeeds
-        }
-    } catch (e) {
-        console.warn("Cache read failed, fetching from server...");
-    }
+        // 1. Check Firebase first
+        const docRef = db.collection('dictionaries').doc(channelId);
+        const docSnap = await docRef.get();
 
-    // 2. Fetch from GitHub Pages / static assets
-    try {
-        const response = await fetch(`assets/dict/${channelId}.xlsx`);
-        if (!response.ok) {
-            throw new Error(`伺服器找不到該頻道字典 (${response.status})`);
-        }
-        const arrayBuffer = await response.arrayBuffer();
-
-        readExcelFile(arrayBuffer, (err, data) => {
-            if (err) {
-                statusDict.innerHTML = `<span class="status-error">🔴 字典解析失敗: ${err.message}</span>`;
-                return;
+        if (docSnap.exists) {
+            console.log("Found dictionary in Firebase");
+            const cloudData = docSnap.data().data;
+            parseDictionaryData(cloudData, channelId, true);
+        } else {
+            // 2. Not in Firebase, fallback to initial github excel file
+            console.log("Not in Firebase, fetching initial seed...");
+            statusDict.innerText = '⏳ 雲端無資料，正在載入系統初始字典...';
+            const response = await fetch(`assets/dict/${channelId}.xlsx`);
+            if (!response.ok) {
+                throw new Error(`伺服器找不到該頻道初始字典 (${response.status})`);
             }
-            parseDictionaryData(data, channelId, false);
-        });
+            const arrayBuffer = await response.arrayBuffer();
 
+            readExcelFile(arrayBuffer, async (err, data) => {
+                if (err) {
+                    statusDict.innerHTML = `<span class="status-error">🔴 字典解析失敗: ${err.message}</span>`;
+                    return;
+                }
+
+                // Parse and then upload seed directly back to Firebase
+                parseDictionaryData(data, channelId, false);
+                try {
+                    statusDict.innerText = '⏳ 正在將初始字典同步至雲端...';
+                    await docRef.set({ data: data });
+                    console.log("Seed data uploaded to Firebase successfully");
+                    statusDict.innerText = `✅ 成功載入並同步字典 (${data.length} 筆資料)`;
+                } catch (e) {
+                    console.error("Failed to upload seed to Firebase", e);
+                }
+            });
+        }
     } catch (e) {
-        statusDict.innerHTML = `<span class="status-error">🔴 下載字典失敗: ${e.message}</span>`;
+        console.error(e);
+        statusDict.innerHTML = `<span class="status-error">🔴 讀取雲端字典失敗: ${e.message}</span>`;
     }
 }
 
@@ -684,7 +689,7 @@ btnSettings.addEventListener('click', () => {
 btnCloseSettings.addEventListener('click', closeSettings);
 btnCancelSettings.addEventListener('click', closeSettings);
 
-btnSaveSettings.addEventListener('click', () => {
+btnSaveSettings.addEventListener('click', async () => {
     if (!window.mySpreadsheet) return;
     const data = window.mySpreadsheet.getData();
 
@@ -701,17 +706,44 @@ btnSaveSettings.addEventListener('click', () => {
     }
 
     const channelId = channelSelect.value;
-    parseDictionaryData(newRawDictList, channelId, false);
 
-    closeSettings();
-    alert("✅ 設定已儲存並更新您的瀏覽器記憶！");
+    // 1. Update active memory
+    parseDictionaryData(newRawDictList, channelId, true);
+
+    // 2. Upload to Firebase
+    btnSaveSettings.disabled = true;
+    btnSaveSettings.innerText = '上傳中...';
+    try {
+        await db.collection('dictionaries').doc(channelId).set({ data: newRawDictList });
+        alert("✅ 字典已成功同步至 Firebase 雲端資料庫！所有人都能看到最新版本了！");
+        closeSettings();
+    } catch (e) {
+        console.error("Firebase save failed", e);
+        alert("儲存至雲端失敗：" + e.message);
+    } finally {
+        btnSaveSettings.disabled = false;
+        btnSaveSettings.innerText = '儲存記憶';
+    }
 });
 
-btnResetDict.addEventListener('click', () => {
-    if (confirm("確定要刪除自訂記憶，重新從伺服器還原為預設字典嗎？")) {
+btnResetDict.addEventListener('click', async () => {
+    if (confirm("確定要刪除雲端自訂字典，重新回到系統原始狀態嗎？這會影響所有使用者！")) {
         const channelId = channelSelect.value;
-        localStorage.removeItem(`epg_dict_${channelId}`);
-        closeSettings();
-        loadDictionaryForChannel(channelId);
+        const oldText = btnResetDict.innerText;
+        btnResetDict.disabled = true;
+        btnResetDict.innerText = '刪除中...';
+
+        try {
+            await db.collection('dictionaries').doc(channelId).delete();
+            closeSettings();
+            loadDictionaryForChannel(channelId);
+            alert("雲端字典已成功重設。");
+        } catch (e) {
+            console.error(e);
+            alert("重設失敗：" + e.message);
+        } finally {
+            btnResetDict.disabled = false;
+            btnResetDict.innerText = oldText;
+        }
     }
 });
