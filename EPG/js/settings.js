@@ -90,7 +90,9 @@ function renderSpreadsheet(rawData) {
         ],
         search: true,
         pagination: 100,
-        tableOverflow: false
+        tableOverflow: true,
+        tableWidth: "100%",
+        tableHeight: "100%"
     });
 }
 
