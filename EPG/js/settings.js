@@ -80,20 +80,25 @@ function renderSpreadsheet(rawData) {
         tableData.push(['', '', '', '']);
     }
 
-    currentGrid = jspreadsheet(spreadsheetContainer, {
-        data: tableData,
-        columns: [
-            { type: 'text', title: '英文片名 (比對金鑰)', width: 300 },
-            { type: 'text', title: '中文片名', width: 300 },
-            { type: 'text', title: '分類', width: 120 },
-            { type: 'text', title: '節目分級', width: 100 }
-        ],
-        search: true,
-        pagination: 100,
-        tableOverflow: true,
-        tableWidth: "100%",
-        tableHeight: "100%"
+    const spreadsheets = jspreadsheet(spreadsheetContainer, {
+        worksheets: [{
+            data: tableData,
+            columns: [
+                { type: 'text', title: '英文片名 (比對金鑰)', width: 300 },
+                { type: 'text', title: '中文片名', width: 300 },
+                { type: 'text', title: '分類', width: 120 },
+                { type: 'text', title: '節目分級', width: 100 }
+            ],
+            search: true,
+            pagination: 100,
+            tableOverflow: true,
+            tableWidth: "100%",
+            tableHeight: "100%"
+        }]
     });
+
+    // v5 returns an array of worksheets
+    currentGrid = spreadsheets[0];
 }
 
 // Save logic
