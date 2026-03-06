@@ -9,31 +9,14 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- SheetJS for Excel processing -->
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
-    <!-- Jspreadsheet CE for in-browser Excel editor -->
-    <script src="https://cdn.jsdelivr.net/npm/jspreadsheet-ce@4/dist/index.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jsuites/dist/jsuites.min.js"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jspreadsheet-ce/dist/jspreadsheet.min.css"
-        type="text/css" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jsuites/dist/jsuites.min.css" type="text/css" />
+    <!-- SheetJS for Excel processing -->
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+
 
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
-
-    <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyAaWnmFJFiE4qGxOakqNpSpIWaOAuozOQ0",
-            authDomain: "portico-epg.firebaseapp.com",
-            projectId: "portico-epg",
-            storageBucket: "portico-epg.firebasestorage.app",
-            messagingSenderId: "233497411246",
-            appId: "1:233497411246:web:9246d6151eb0ff655ff73f",
-            measurementId: "G-NDX39HGFLF"
-        };
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
-    </script>
+    <script src="js/firebase-config.js"></script>
 </head>
 
 <body>
@@ -47,7 +30,8 @@
                 <h2>頻道EPG轉檔工具 <span class="badge">beta</span></h2>
             </div>
             <div class="header-actions" style="margin-left: auto;">
-                <button id="btn-settings" class="settings-btn" title="設定與更新字典">⚙️ 設定</button>
+                <a id="btn-settings" class="settings-btn" href="settings.html"
+                    style="text-decoration: none; display: inline-block; text-align: center;" title="設定與更新字典">⚙️ 設定</a>
             </div>
         </header>
 
@@ -104,39 +88,6 @@
         <footer style="text-align: center; padding: 2rem 0 0 0; color: #9ca3af; font-size: 0.85rem;">
             Portico Media &copy; 2026 All Rights Reserved
         </footer>
-    </div>
-
-    <!-- Settings Modal -->
-    <div id="settings-modal" class="modal-overlay hidden">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>⚙️ 系統設定 & 更新字典</h3>
-                <button id="btn-close-settings" class="close-btn">&times;</button>
-            </div>
-            <div class="modal-body"
-                style="display: flex; flex-direction: column; gap: 1rem; flex: 1; overflow: hidden;">
-                <div class="setting-item"
-                    style="flex: 1; display: flex; flex-direction: column; overflow: hidden; margin-bottom: 0;">
-                    <h4>編輯 <span id="current-edit-channel" style="color: var(--blue-color);"></span> 的譯名資料庫</h4>
-                    <p style="font-size: 0.9rem; color: #666; margin-bottom: 1rem; flex-shrink: 0;">
-                        您可以直接像操作 Excel 一樣編輯下方的表格。支援複製貼上功能。<br>
-                        編輯完成後點擊「儲存記憶」即可將新結果存入瀏覽器快取。
-                    </p>
-
-                    <div id="spreadsheet-container"
-                        style="flex: 1; overflow: auto; border: 1px solid #e5e7eb; border-radius: 8px;"></div>
-                </div>
-
-                <div
-                    style="display: flex; justify-content: flex-end; gap: 1rem; flex-shrink: 0; padding-top: 1rem; border-top: 1px solid #f3f4f6;">
-                    <button id="btn-reset-dict" class="settings-btn"
-                        style="color: #ef4444; border-color: #fca5a5; margin-right: auto;">還原預設字典</button>
-                    <button id="btn-cancel-settings" class="settings-btn">取消</button>
-                    <button id="btn-save-settings" class="settings-btn"
-                        style="background: var(--blue-color); color: white; border-color: var(--blue-color);">儲存記憶</button>
-                </div>
-            </div>
-        </div>
     </div>
 
     <script src="js/app.js"></script>
