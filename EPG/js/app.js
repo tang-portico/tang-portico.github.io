@@ -677,9 +677,7 @@ btnSettings.addEventListener('click', () => {
         ],
         search: true,
         pagination: 50,
-        tableOverflow: true,
-        tableWidth: "100%",
-        tableHeight: "100%"
+        tableOverflow: false
     });
 });
 

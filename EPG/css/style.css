@@ -340,12 +340,16 @@ header {
 .modal-content {
     background: white;
     border-radius: 16px;
-    width: 90%;
-    max-width: 500px;
+    width: 95%;
+    max-width: 900px;
+    height: 800px;
+    max-height: 90vh;
     padding: 2rem;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
     transform: translateY(0);
     transition: transform 0.2s;
+    display: flex;
+    flex-direction: column;
 }
 
 .modal-overlay.hidden .modal-content {
